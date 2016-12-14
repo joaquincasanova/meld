@@ -54,8 +54,8 @@ mv ~/MNE-2.7.0-3106-Linux-x86_64 ~
 
 cd ~/centos6-x86_64-packages/
 ./setup.sh
-
-cd ~/sip-4.18.1
+c
+d ~/sip-4.18.1
 sudo python configure.py
 sudo make
 sudo make install
@@ -77,4 +77,6 @@ echo "MNE_ROOT=/home/jcasa/MNE-2.7.0-3106-Linux-x86_64" >> ~/.bashrc
 echo 'source $MNE_ROOT/bin/mne_setup_sh' >> ~/.bashrc
 echo "FREESURFER_HOME=/home/jcasa/freesurfer" >> ~/.bashrc
 echo 'source $FREESURFER_HOME/SetUpFreeSurfer.sh' >> ~/.bashrc
+echo 'SUBJECTS_DIR=/home/jcasa/mne_data/openfmri/subjects' >> ~/.bashrc
+
 source ~/.bashrc
