@@ -137,7 +137,8 @@ class dipole:
         else:
             self.qq=np.zeros([self.p,self.batch_size*self.n_steps])
             self.qq[np.argmax(x0b,0)]=100e-9
-            
+
+        #qq is pxb*n
     def dipole_gain_B(self,X0,Y0,Z0,AZ0,EL0,R0):
         #returns gain matrix for a dipole at R0. following mosher 1992.
         xyzRR0=np.ones([self.m,3])
@@ -291,14 +292,15 @@ class dipole:
 
     def meas_scale_batch_dipole(self):
         #qq is pxbatch_size*n_steps - convert to one-hot for tf neural net
-        
-        ppp=np.argmax(np.abs(np.nan_to_num(self.qq)),axis=0)
-        q = np.zeros(self.qq.shape)
-        q[ppp,[range(0,self.qq.shape[1])]]=1.0#qq is pxbatch_size*n_steps
+        #don't do that if fitting current density. in fact it's redundant if you use cross-entropy as the cost function.
+        #ppp=np.argmax(np.abs(np.nan_to_num(self.qq)),axis=0)
+        #q = np.zeros(self.qq.shape)
+        #q[ppp,[range(0,self.qq.shape[1])]]=1.0#qq is pxbatch_size*n_steps
         #ONE-HOT!!!
         #(qq-np.amin(qq,axis=0))/(np.amax(qq,axis=0)-np.amin(qq,axis=0)))
         
-        self.qtrue=q
+        #self.qtrue=q
+        self.qtrue=self.qq
         
     def batch_sequence_gen(self,x0b=None):
         #use x0b if you have a time series of activations from dcm
@@ -318,7 +320,7 @@ class dipole:
         self.bmeas = self.bmeas + noise_sigma_B*np.random.randn(self.bmeas.shape[0],self.bmeas.shape[1])
         self.vmeas = self.vmeas + noise_sigma_V*np.random.randn(self.vmeas.shape[0],self.vmeas.shape[1])
 
-        self.meas_scale_batch_meas()#PCA
+        self.meas_scale_batch_meas()#scale fields
         
         #if we have an XYZ list given as measurement locales, we need to interpolate to an image coordinate
         if self.meas_xyz is not None:
@@ -334,14 +336,12 @@ class dipole:
         #stack 'em
         self.meas_scale_batch_dipole()
         self.meas_scale=np.transpose(self.meas_scale.reshape([-1,self.batch_size,self.n_steps]),(1, 0, 2))
-        self.qtrue=np.transpose(self.qtrue.reshape([-1,self.batch_size,self.n_steps]),(1, 0, 2))
+        self.qtrue=np.transpose(self.qtrue.reshape([-1,self.batch_size,self.n_steps]),(1, 2, 0))#bxnxp
            
         #Need matrix input for cnn.
         self.meas_scale=np.transpose(self.meas_scale,(0,2,1))
         self.meas_img=self.meas_scale.reshape([-1,self.n_steps,2,self.meas_dims[1],self.meas_dims[0]])#this shit took a week to debug, fuck ndarrays
         self.meas_img=np.squeeze(np.transpose(self.meas_img,(0,1,4,3,2)))
-
-        self.qtrue=np.squeeze(np.transpose(self.qtrue,(0,2,1)))
         
         return self.meas_img,self.qtrue,self.m,self.p
 

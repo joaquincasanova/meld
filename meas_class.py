@@ -17,12 +17,14 @@ def scale_dipole(dipole_in):
     qq=dipole_in.transpose((0,2,1)).reshape([p,-1])#pxnxb->pxbxn->pxb*n
     #qq is pxbatch_size*n_steps - convert to one-hot for tf neural net
     #this should not be done if you want to fit current density.
-    ppp=np.argmax(np.abs(np.nan_to_num(qq)),axis=0)
-    q = np.zeros(qq.shape)
-    q[ppp,[range(0,qq.shape[1])]]=1.0#qq is pxbatch_size*n_steps
-    #ONE-HOT!!!
+    #ppp=np.argmax(np.abs(np.nan_to_num(qq)),axis=0)
+    #q = np.zeros(qq.shape)
+    #q[ppp,[range(0,qq.shape[1])]]=1.0#qq is pxbatch_size*n_steps
+    #ONE-HOT!!! convert to one-hot for tf neural net
+    #don't do that if fitting current density. in fact it's redundant if you use cross-entropy as the cost function.
     #(qq-np.amin(qq,axis=0))/(np.amax(qq,axis=0)-np.amin(qq,axis=0)))
-    print "Dipoles now as one-hot encoding"
+    print "Dipoles now reshaped for TF NN."#as one-hot encoding"
+    q=qq
     qtrue=q.reshape([p,b,n]).transpose((1,2,0))#bxnxp
     return qtrue, p
 

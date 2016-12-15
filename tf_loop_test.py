@@ -17,7 +17,7 @@ with open('./nn_last_errors_noise_free.csv','w') as csvfile:
                 for batches in [10]:
                     for dropout in [.99]:
                         for per_batch in [500]:
-                            for batch_size in [100]:
+                            for batch_size in [90]:
                                 for k_conv in [3]:
                                     for n_conv1 in [2]:
                                         for n_conv2 in [7]:
@@ -30,7 +30,7 @@ with open('./nn_last_errors_noise_free.csv','w') as csvfile:
                                                     else:
                                                         Ts = 1.0/n_steps#s, sample time
                                                     meas_dims=[11,11]
-                                                    dipole_dims=[4,5,5]
+                                                    dipole_dims=[5,5,5]
 
                                                     n_chan_in=2
                                                     if fixed is True:
