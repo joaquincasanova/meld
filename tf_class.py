@@ -1,3 +1,4 @@
+
 import tensorflow as tf
 
 # Create model
@@ -14,7 +15,7 @@ def max_pool(img, k):
                           padding='VALID')
 
 class tf_meld:
-    def __init__(self,learning_rate,meas_dims,k_conv,k_pool,n_chan_in,n_conv1,n_conv2,n_out,n_steps=None,n_lstm=None,n_layer=None):
+    def __init__(self,learning_rate,meas_dims,k_conv,k_pool,n_chan_in,n_conv1,n_conv2,n_out,n_steps=None,n_lstm=None,n_layer=None,cost_func='cross',cost_time='all'):
         self.learning_rate=learning_rate
         print "learning rate: ", self.learning_rate
         self.meas_dims=meas_dims
@@ -42,6 +43,10 @@ class tf_meld:
         print "n_lstm: ", self.n_lstm
         self.n_layer=n_layer
         print "n_layer: ", self.n_layer
+        self.cost_func=cost_func
+        print "cost_func: ", self.cost_func
+        self.cost_time=cost_time
+        print "cost_time: ", self.cost_time
         
     def network(self):
         
@@ -153,9 +158,25 @@ class tf_meld:
         with tf.name_scope('train_step'):
             #use rmse as cost function if you are trying to fit current density.
             if self.n_steps is None:
-                self.train_step = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.cross)
+                if self.cost_func=='cross':
+                    self.train_step = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.cross)
+                elif self.cost_func=='rmse':
+                    self.train_step = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.rmse)
+                else:
+                    self.train_step = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.cross)
             else:
-                self.train_step = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.cross)
-                #change to cross_last if you want.
-
+                if self.cost_time=='all':
+                    if self.cost_func=='cross':
+                        self.train_step = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.cross)
+                    elif self.cost_func=='rmse':
+                        self.train_step = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.rmse)
+                    else:
+                        self.train_step = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.cross)
+                elif self.cost_time=='last':
+                    if self.cost_func=='cross':
+                        self.train_step = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.cross_last)
+                    elif self.cost_func=='rmse':
+                        self.train_step = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.rmse_last)
+                    else:
+                        self.train_step = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.cross_last)
         self.init_step = tf.initialize_all_variables()
