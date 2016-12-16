@@ -107,7 +107,7 @@ qtrue_all,p=meas_class.scale_dipole(dipole)
 
 #meas_meg_in n_stepsxmxbatchsize
 #meas_eeg_in n_stepsxmxbatchsize
-meas_dims=[int(np.sqrt(n_eeg+n_meg)),int(np.sqrt(n_eeg+n_meg))] #remember, MUST have image pixels<#sensors
+meas_dims=[13,13]
 print "Image grid dimensions: ", meas_dims
 tf_meas = meas_class.meas(meg_data,meg_xyz, eeg_data,eeg_xyz, meas_dims, n_steps, total_batch_size)
 tf_meas.scale()
@@ -122,7 +122,7 @@ fieldnames=['cost','cost_step','batches','learning rate','batch_size','per_batch
 with open('./nn_real.csv','w') as csvfile:
     writer=csv.DictWriter(csvfile,fieldnames=fieldnames)
     writer.writeheader()
-    for cost in ['rmse','cross']:
+    for cost in ['cross','rmse']:
         for cost_step in ['last','all']:
             for learning_rate in [0.005]:
                 for batches in [10]:
@@ -135,11 +135,7 @@ with open('./nn_real.csv','w') as csvfile:
                                             for n_layer in [2, 3]:
                                                 for n_lstm in [100, 300, 1000]:
                                                     test_size=batch_size
-                                                    if n_steps is None:
-                                                        Ts = 1.0
-                                                    else:
-                                                        Ts = 1.0/n_steps#s, sample time
-
+                                                    
                                                     n_chan_in=2
                                                     k_pool=1
                                                     n_out=p
@@ -184,4 +180,3 @@ with open('./nn_real.csv','w') as csvfile:
                                                         writer.writerow({'cost':cost,'cost_step':cost_step,'batches':batches,'learning rate':learning_rate,'batch_size':batch_size,'per_batch':per_batch,'dropout':dropout,'k_conv':k_conv,'n_conv1':n_conv1,'n_conv2':n_conv2,'n_layer':n_layer,'n_lstm':n_lstm,'n_steps':n_steps,'train step':-1,'xentropy':ce,'rmse':err,'accuracy':acc,'xentropy_last':ce_l,'rmse_last':err_l,'accuracy_last':acc_l})
 
     csvfile.close()
-p

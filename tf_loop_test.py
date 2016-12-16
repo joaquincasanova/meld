@@ -50,7 +50,7 @@ with open('./nn_last_errors_noise_free.csv','w') as csvfile:
                                                     n_in=meas_dims[0]*meas_dims[1]*2
                                                     n_dense=int((meas_dims[0]-k_conv+1)/k_pool-k_conv+1)*int((meas_dims[1]-k_conv+1)/k_pool-k_conv+1)*n_conv2
                                                     n_lstm=n_steps
-                                                    cnn_rnn=tf_class.tf_meld(learning_rate,meas_dims,k_conv,k_pool,n_chan_in,n_conv1,n_conv2,n_out,n_steps,n_lstm,n_layer)
+                                                    cnn_rnn=tf_class.tf_meld(learning_rate,meas_dims,k_conv,k_pool,n_chan_in,n_conv1,n_conv2,n_out,n_steps,n_lstm,n_layer,cost_func='rmse',cost_time='last')
                                                     tf.reset_default_graph()
                                                     cnn_rnn.network()
 

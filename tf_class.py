@@ -107,51 +107,51 @@ class tf_meld:
                 data = tf.reshape(dense_out, [-1, self.n_steps, self.n_lstm])
                 output, state = tf.nn.dynamic_rnn(cell, data, dtype=tf.float32)
 
-                val = tf.transpose(output,[1,0,2])
-                last = tf.gather(val, int(val.get_shape()[0])-1)
+                val = tf.transpose(output,[1,0,2])#nxbxn_lstm
+                last = tf.gather(val, int(val.get_shape()[0])-1)#bxn_lstm
                 
-                outs = tf.reshape(output, [-1, self.n_lstm])
-
-                weight = tf.Variable(tf.truncated_normal([self.n_lstm,self.n_out], stddev=0.1))
-                bias = tf.Variable(tf.constant(0.1, shape=[self.n_out]))
+                outs = tf.reshape(output, [-1, self.n_lstm])#n*bxn_lstm
                 
                 wrnn = tf.Variable(tf.truncated_normal([self.n_lstm,self.n_out], stddev=0.1))
                 brnn = tf.Variable(tf.constant(0.1, shape=[self.n_out]))
 
-                logits = tf.add(tf.matmul(outs,wrnn),brnn)#logits
-                logits = tf.reshape(logits,[-1,self.n_out])
+                logits = tf.add(tf.matmul(outs,wrnn),brnn)#logits - b*nxp
+                #logits = tf.reshape(logits,[-1,self.n_out])#b*nxp
                 
-                logits_last=tf.add(tf.matmul(last,weight),bias)#logits
+                logits_last=tf.add(tf.matmul(last,wrnn),brnn)#logits - bxp
 
                 qhat_last = tf.nn.softmax(logits_last,name="qhat_last")
                 self.qhat = tf.nn.softmax(logits,name="qhat")
                 
         with tf.name_scope('cost'):
             A=tf.argmax(logits,1)
-            if self.n_steps is None:        
+            if self.n_steps is None:    
                 B=tf.argmax(self.qtruePH,1)
-                self.cross = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits, self.qtruePH),name="cross")
-                self.cross_last = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits, self.qtruePH),name="cross_last")
-
+                qtrue_OH = tf.one_hot(B,self.n_out,on_value=1,off_value=0,axis=-1)#need one-hot for CE calculation
+                
+                self.cross = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits, self.qtruePH_OH),name="cross")
                 self.accuracy = tf.reduce_mean(tf.cast(tf.equal(A,B),tf.float32),name="accuracy")
                 self.rmse = tf.sqrt(tf.reduce_mean(tf.square(tf.sub(self.qhat,self.qtruePH))),name="rmse")
-            
+
+                self.cross_last = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits, self.qtruePH_OH),name="cross_last")        
                 self.accuracy_last = tf.reduce_mean(tf.cast(tf.equal(A,B),tf.float32),name="accuracy_last")
                 self.rmse_last = tf.sqrt(tf.reduce_mean(tf.square(tf.sub(self.qhat,self.qtruePH))),name="rmse_last")
             else:
+                qtrue_unflat = tf.reshape(self.qtruePH,[-1,self.n_out])#b*nxp
                 AA=tf.argmax(logits_last,1)
-                B=tf.argmax(tf.reshape(self.qtruePH,[-1,self.n_out]),1)
-
-                qtrue_tran = tf.transpose(self.qtruePH,[1,0,2])
-                qtrue_last = tf.gather(qtrue_tran, int(qtrue_tran.get_shape()[0])-1)
-
-                BB=tf.argmax(qtrue_last,1)
+                B=tf.argmax(qtrue_unflat,1)#b*nx1
+                qtrue_OH = tf.one_hot(B,self.n_out,on_value=1,off_value=0,axis=-1)#need one-hot for CE calculation
                 
-                self.cross = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits, tf.reshape(self.qtruePH,[-1,self.n_out])),name="cross")
+                qtrue_tran = tf.transpose(self.qtruePH,[1,0,2])#nxbxp
+                qtrue_last = tf.gather(qtrue_tran, int(qtrue_tran.get_shape()[0])-1)#bxp
+                BB=tf.argmax(qtrue_last,1)#bx1
+                qtrue_last_OH = tf.one_hot(BB,self.n_out,on_value=1,off_value=0,axis=-1)#need one-hot for CE calculation
+                
+                self.cross = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits, qtrue_OH),name="cross")
                 self.accuracy = tf.reduce_mean(tf.cast(tf.equal(A,B),tf.float32),name="accuracy")
-                self.rmse = tf.sqrt(tf.reduce_mean(tf.square(tf.sub(self.qhat,tf.reshape(self.qtruePH,[-1,self.n_out])))),name="rmse")
+                self.rmse = tf.sqrt(tf.reduce_mean(tf.square(tf.sub(self.qhat,qtrue_unflat))),name="rmse")
                 
-                self.cross_last = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits_last, qtrue_last),name="cross_last")
+                self.cross_last = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits_last, qtrue_last_OH),name="cross_last")
                 self.accuracy_last = tf.reduce_mean(tf.cast(tf.equal(AA,BB),tf.float32),name="accuracy_last")
                 self.rmse_last = tf.sqrt(tf.reduce_mean(tf.square(tf.sub(qtrue_last,qhat_last))),name="rmse_last")
             
