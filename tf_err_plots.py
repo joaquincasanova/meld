@@ -84,7 +84,7 @@ for e in [col_acc, col_acc_last]:
                             picks = np.intersect1d(picks, np.where(data[:,col_n_lstm]==m2))
                             data_slice_x=data[picks,col_step]
                             data_slice_y=data[picks,e]
-                            plt.plot(data_slice_x, data_slice_y,col,label=lab)
+                            plt.plot(data_slice_x.T, data_slice_y.T,col,label=lab)
                     plt.title('a1'+', '+a2)
                     plt.xlim(0,np.amax(data_slice_x))
                     if e==col_acc:

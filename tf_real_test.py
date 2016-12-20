@@ -91,7 +91,7 @@ snr = 3.
 lambda2 = 1. / snr ** 2
 stc = apply_inverse_epochs(epochs, inverse_operator, lambda2,
                     method=method, pick_ori=None)
-stc.save('sample_audvis-source-epochs')
+#stc.save('sample_audvis-source-epochs')
 
 total_batch_size = len(stc)#number of events. we'll consider each event an example.
 test_size = total_batch_size % 200
@@ -126,9 +126,9 @@ with open('./nn_real.csv','w') as csvfile:
     for cost in ['cross','rmse']:
         for cost_step in ['last','all']:
             for learning_rate in [0.005]:
-                for batches in [10]:
+                for batches in [5]:
                     for dropout in [.99]:
-                        for per_batch in [1000]:
+                        for per_batch in [500]:
                             for batch_size in [(total_batch_size-test_size)/batches]:
                                 for k_conv in [3]:
                                     for n_conv1 in [2, 5, 10]:
