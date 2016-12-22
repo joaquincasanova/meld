@@ -93,7 +93,8 @@ class tf_meld:
             else:
                 dense = tf.reshape(conv2, [-1, self.n_dense]) # Reshape conv1 output to fit dense layer input
                 if self.n_dense==self.n_lstm:
-                    dense_out = tf.nn.softmax(dense,name="dense_out")
+                    wd = tf.Variable(tf.random_normal([self.n_dense]))
+                    dense_out = tf.nn.softmax(tf.multiply(wd,dense),name="dense_out")
                     dense_out= tf.nn.dropout(dense_out, self.dropoutPH)
                 else:
                     wd = tf.Variable(tf.truncated_normal([self.n_dense, self.n_lstm], stddev=0.1))
