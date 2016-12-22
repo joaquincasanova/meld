@@ -31,7 +31,7 @@
 #sudo pip install --upgrade PySurfer
 #pip install --upgrade mne
 #sudo pip install --upgrade h5py
-#sudo pip install --upgrade https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-0.12.0rc1-cp27-none-linux_x86_64.whl
+sudo pip install --upgrade https://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-0.12.0rc1-cp27-none-linux_x86_64.whl
 #cd ~/Downloads
 #wget http://sourceforge.net/projects/pyqt/files/PyQt4/PyQt-4.11.4/PyQt-x11-gpl-4.11.4.tar.gz
 #tar -xvzf PyQt*
@@ -66,18 +66,18 @@
 #cd ~/freesurfer
 
 #cd ~/MNE-2.7.0-3106-Linux-x86_64
-export MNE_ROOT=/home/jcasa/MNE-2.7.0-3106-Linux-x86_64
-source $MNE_ROOT/bin/mne_setup_sh
+#export MNE_ROOT=/home/jcasa/MNE-2.7.0-3106-Linux-x86_64
+#source $MNE_ROOT/bin/mne_setup_sh
 
-cd ~
+#cd ~
 
-echo "QT_API=pyqt" >> ~/.bashrc
-echo "ETS_TOOLKIT=qt4" >> ~/.bashrc
-echo "MNE_ROOT=/home/jcasa/MNE-2.7.0-3106-Linux-x86_64" >> ~/.bashrc
-echo 'export MNE_ROOT=/home/jcasa/MNE-2.7.0-3106-Linux-x86_64' >> ~/.bashrc
-echo 'source $MNE_ROOT/bin/mne_setup_sh' >> ~/.bashrc
-echo "FREESURFER_HOME=/home/jcasa/freesurfer" >> ~/.bashrc
-echo 'source $FREESURFER_HOME/SetUpFreeSurfer.sh' >> ~/.bashrc
-echo 'SUBJECTS_DIR=/home/jcasa/mne_data/openfmri/subjects' >> ~/.bashrc
+#echo "QT_API=pyqt" >> ~/.bashrc
+#echo "ETS_TOOLKIT=qt4" >> ~/.bashrc
+#echo "MNE_ROOT=/home/jcasa/MNE-2.7.0-3106-Linux-x86_64" >> ~/.bashrc
+#echo 'export MNE_ROOT=/home/jcasa/MNE-2.7.0-3106-Linux-x86_64' >> ~/.bashrc
+#echo 'source $MNE_ROOT/bin/mne_setup_sh' >> ~/.bashrc
+#echo "FREESURFER_HOME=/home/jcasa/freesurfer" >> ~/.bashrc
+#echo 'source $FREESURFER_HOME/SetUpFreeSurfer.sh' >> ~/.bashrc
+#echo 'SUBJECTS_DIR=/home/jcasa/mne_data/openfmri/subjects' >> ~/.bashrc
 
-source ~/.bashrc
+#source ~/.bashrc

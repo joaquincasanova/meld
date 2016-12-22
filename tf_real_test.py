@@ -120,7 +120,7 @@ m = tf_meas.m
 
 fieldnames=['cost','cost_step','batches','learning rate','batch_size','per_batch','dropout','k_conv','n_conv1','n_conv2','n_layer','n_lstm','n_steps','train step','xentropy','rmse','accuracy','xentropy_last','rmse_last','accuracy_last']
 
-with open('./nn_real.csv','w') as csvfile:
+with open('./nn_real_rnn.csv','w') as csvfile:
     writer=csv.DictWriter(csvfile,fieldnames=fieldnames)
     writer.writeheader()
     for cost in ['cross','rmse']:
@@ -131,10 +131,10 @@ with open('./nn_real.csv','w') as csvfile:
                         for per_batch in [500]:
                             for batch_size in [(total_batch_size-test_size)/batches]:
                                 for k_conv in [3]:
-                                    for n_conv1 in [2, 5, 10]:
-                                        for n_conv2 in [2, 5, 10]:
-                                            for n_layer in [2, 3]:
-                                                for n_lstm in [100, 300, 1000]:
+                                    for n_conv1 in [3]:
+                                        for n_conv2 in [5]:
+                                            for n_layer in [2]:
+                                                for n_lstm in [p]:
                                                     test_size=batch_size
                                                     
                                                     n_chan_in=2
