@@ -134,7 +134,7 @@ with open('./nn_real_rnn.csv','w') as csvfile:
                                     for n_conv1 in [3]:
                                         for n_conv2 in [5]:
                                             for n_layer in [2]:
-                                                for n_lstm in [p]:
+                                                for n_lstm in [1884]:
                                                     test_size=batch_size
                                                     
                                                     n_chan_in=2

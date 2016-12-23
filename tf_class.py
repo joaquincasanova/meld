@@ -92,15 +92,10 @@ class tf_meld:
                 self.qhat = tf.nn.softmax(logits,name="qhat")
             else:
                 dense = tf.reshape(conv2, [-1, self.n_dense]) # Reshape conv1 output to fit dense layer input
-                if self.n_dense==self.n_lstm:
-                    wd = tf.Variable(tf.random_normal([self.n_dense]))
-                    dense_out = tf.nn.softmax(tf.multiply(wd,dense),name="dense_out")
-                    dense_out= tf.nn.dropout(dense_out, self.dropoutPH)
-                else:
-                    wd = tf.Variable(tf.truncated_normal([self.n_dense, self.n_lstm], stddev=0.1))
-                    bd = tf.Variable(tf.constant(0.1, shape=[self.n_lstm]))
-                    dense_out = tf.nn.softmax(tf.matmul(dense, wd) + bd,name="dense_out")
-                    dense_out = tf.nn.dropout(dense_out, self.dropoutPH)
+                wd = tf.Variable(tf.truncated_normal([self.n_dense, self.n_lstm], stddev=0.1))
+                bd = tf.Variable(tf.constant(0.1, shape=[self.n_lstm]))
+                dense_out = tf.nn.softmax(tf.matmul(dense, wd) + bd,name="dense_out")
+                dense_out = tf.nn.dropout(dense_out, self.dropoutPH)
 
         with tf.name_scope('rnn_layer'):
             if self.n_steps is not None:
@@ -130,7 +125,12 @@ class tf_meld:
                 
         with tf.name_scope('cost'):
             A=tf.argmax(logits,1)
-            if self.n_steps is None:    
+            if self.n_steps is None:
+                wd = tf.Variable(tf.truncated_normal([self.n_dense, self.n_lstm], stddev=0.1))
+                bd = tf.Variable(tf.constant(0.1, shape=[self.n_lstm]))
+                dense_out = tf.nn.softmax(tf.matmul(dense, wd) + bd,name="dense_out")
+                dense_out = tf.nn.dropout(dense_out, self.dropoutPH)
+
                 B=tf.argmax(self.qtruePH,1)
                 qtrue_OH = tf.one_hot(B,self.n_out,on_value=1,off_value=0,axis=-1)#need one-hot for CE calculation
                 
