@@ -128,7 +128,7 @@ with open('./nn_real_rnn_lstm.csv','w') as csvfile:
             for learning_rate in [0.005]:
                 for batches in [5]:
                     for dropout in [.99]:
-                        for per_batch in [100]:
+                        for per_batch in [500]:
                             for batch_size in [(total_batch_size-test_size)/batches]:
                                 for k_conv in [3]:
                                     for n_conv1 in [3]:
@@ -139,7 +139,7 @@ with open('./nn_real_rnn_lstm.csv','w') as csvfile:
                                                 n_out=p
                                                 n_in=meas_dims[0]*meas_dims[1]*2
                                                 n_dense=int((meas_dims[0]-k_conv+1)/k_pool-k_conv+1)*int((meas_dims[1]-k_conv+1)/k_pool-k_conv+1)*n_conv2
-                                                for n_lstm in [100, 300, 1000]:
+                                                for n_lstm in [100,300,1000]:
                                                     test_size=batch_size
                                                     #pick a first batch of batch_size
                                                     meas_img = meas_img_all[0:(batch_size),:,:,:,:]
@@ -162,6 +162,7 @@ with open('./nn_real_rnn_lstm.csv','w') as csvfile:
                                                             if step % 10==0:
                                                                 print "Train Step: ", step, "CE: ",ce, " Accuracy: ", acc, "RMSE: ", err, "CE last: ",ce_l, " Accuracy last: ", acc_l, "RMSE last: ", err_l
                                                                 writer.writerow({'cost':cost,'cost_step':cost_step,'batches':batches,'learning rate':learning_rate,'batch_size':batch_size,'per_batch':per_batch,'dropout':dropout,'k_conv':k_conv,'n_conv1':n_conv1,'n_conv2':n_conv2,'n_layer':n_layer,'n_steps':n_steps,'n_lstm':n_lstm,'train step':step,'xentropy':ce,'rmse':err,'accuracy':acc,'xentropy_last':ce_l,'rmse_last':err_l,'accuracy_last':acc_l})
+                                                                if acc_l>=.9: break
                                                             if step % per_batch ==0 and step!=0:#generate a new batch
                                                                 batch_num = batch_num+1
                                                                 #pick a nth batch of batch_size
