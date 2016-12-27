@@ -94,7 +94,6 @@ stc = apply_inverse_epochs(epochs, inverse_operator, lambda2,
 #stc.save('sample_audvis-source-epochs')
 
 total_batch_size = len(stc)#number of events. we'll consider each event an example.
-test_size = total_batch_size % 200
 
 n_steps=meg_data.shape[2]
 
@@ -126,11 +125,13 @@ with open('./nn_real_rnn_ttv.csv','w') as csvfile:
     for cost in ['cross']:
         for cost_step in ['last']:
             for learning_rate in [0.005]:
-                for batches in [5]:
+                for batches in [3]:
                     for dropout in [.95]:
                         for per_batch in [500]:
-                            for batch_size in [(total_batch_size-test_size)/batches]:
-                                val_size = batch_size
+                            for batch_size in [60]:
+                                total_batch_size-batches*batch_size
+                                test_size = int(total_batch_size*.15)
+                                val_size = total_batch_size-test_size-batches*batch_size
                                 for k_conv in [3]:
                                     for n_conv1 in [3]:
                                         for n_conv2 in [5]:
@@ -142,20 +143,21 @@ with open('./nn_real_rnn_ttv.csv','w') as csvfile:
                                                 n_dense=int((meas_dims[0]-k_conv+1)/k_pool-k_conv+1)*int((meas_dims[1]-k_conv+1)/k_pool-k_conv+1)*n_conv2
                                                 for n_lstm in [100, 300, 1000]:
                                                     test_size=batch_size
-                                                    test_step=100
-                                                    
-                                                    #pick a first batch of batch_size
-                                                    meas_img = meas_img_all[0:(batch_size),:,:,:,:]
-                                                    qtrue = qtrue_all[0:(batch_size),:,:]
-                                                    batch_num = 0
-
-                                                    #pick a val batch
-                                                    meas_img_val = meas_img_all[batch_size*(batches-1):batch_size*batches,:,:,:,:]
-                                                    qtrue_val = qtrue_all[batch_size*(batches-1):batch_size*batches,:,:]
+                                                    val_step=100
 
                                                     #pick a test batch
-                                                    meas_img_test = meas_img_all[batch_size*batches:,:,:,:,:]
-                                                    qtrue_test = qtrue_all[batch_size*batches:,:,:]
+                                                    meas_img_test = meas_img_all[0:test_size,:,:,:,:]
+                                                    qtrue_test = qtrue_all[0:test_size,:,:]
+
+                                                    #pick a val batch
+                                                    meas_img_val = meas_img_all[(test_size):(test_size+val_size),:,:,:,:]
+                                                    qtrue_val = qtrue_all[(test_size):(test_size+val_size),:,:]
+                                                    
+                                                    #pick a first batch of batch_size
+                                                    batch_num=0
+                                                    meas_img = meas_img_all[(test_size+val_size+batch_size*batch_num):(test_size+val_size+batch_size*(batch_num+1)),:,:,:,:]
+                                                    qtrue = qtrue_all[(test_size+val_size+batch_size*batch_num):(test_size+val_size+batch_size*(batch_num+1)),:,:]
+                                                    batch_num = 0
                                                     
                                                     cnn_rnn=tf_class.tf_meld(learning_rate,meas_dims,k_conv,k_pool,n_chan_in,n_conv1,n_conv2,n_out,n_steps,n_lstm,n_layer,cost_func=cost,cost_time=cost_step)
                                                     tf.reset_default_graph()
@@ -164,29 +166,31 @@ with open('./nn_real_rnn_ttv.csv','w') as csvfile:
                                                     with tf.Session() as session:
 
                                                         session.run(cnn_rnn.init_step)
+                                                        while batch_num<batches:
+                                                            step=0
+                                                            while step<per_batch:
 
-                                                        for step in range(0,per_batch*(batches-2)):
+                                                                _ , guess,ce,acc,err,ce_l,acc_l,err_l  = session.run([cnn_rnn.train_step, cnn_rnn.qhat, cnn_rnn.cross, cnn_rnn.accuracy,cnn_rnn.rmse, cnn_rnn.cross_last, cnn_rnn.accuracy_last,cnn_rnn.rmse_last],
+                                                                                                                     feed_dict={cnn_rnn.qtruePH: qtrue, cnn_rnn.measPH: meas_img, cnn_rnn.dropoutPH: dropout})
 
-                                                            _ , guess,ce,acc,err,ce_l,acc_l,err_l  = session.run([cnn_rnn.train_step, cnn_rnn.qhat, cnn_rnn.cross, cnn_rnn.accuracy,cnn_rnn.rmse, cnn_rnn.cross_last, cnn_rnn.accuracy_last,cnn_rnn.rmse_last],
-                                                                                                 feed_dict={cnn_rnn.qtruePH: qtrue, cnn_rnn.measPH: meas_img, cnn_rnn.dropoutPH: dropout})
-
-                                                            if step % 10==0:
-                                                                print "Train Step: ", step, "CE: ",ce, " Accuracy: ", acc, "RMSE: ", err, "CE last: ",ce_l, " Accuracy last: ", acc_l, "RMSE last: ", err_l
+                                                                if step % 10==0:
+                                                                    print "Train Step: ", step, "CE: ",ce, " Accuracy: ", acc, "RMSE: ", err, "CE last: ",ce_l, " Accuracy last: ", acc_l, "RMSE last: ", err_l
                                                                 writer.writerow({'cost':cost,'cost_step':cost_step,'batches':batches,'learning rate':learning_rate,'batch_size':batch_size,'per_batch':per_batch,'dropout':dropout,'k_conv':k_conv,'n_conv1':n_conv1,'n_conv2':n_conv2,'n_layer':n_layer,'n_steps':n_steps,'n_lstm':n_lstm,'train step':step,'xentropy':ce,'rmse':err,'accuracy':acc,'xentropy_last':ce_l,'rmse_last':err_l,'accuracy_last':acc_l})
-                                                            if step % test_step==0:
-                                                                acc_lv_prev=acc_lv
-                                                                guess,cev,accv,errv,ce_lv,acc_lv,err_lv = session.run([cnn_rnn.qhat, cnn_rnn.cross, cnn_rnn.accuracy,cnn_rnn.rmse, cnn_rnn.cross_last, cnn_rnn.accuracy_last,cnn_rnn.rmse_last],
+                                                                if step % val_step==0:
+                                                                    acc_lv_prev=acc_lv
+                                                                    guess,cev,accv,errv,ce_lv,acc_lv,err_lv = session.run([cnn_rnn.qhat, cnn_rnn.cross, cnn_rnn.accuracy,cnn_rnn.rmse, cnn_rnn.cross_last, cnn_rnn.accuracy_last,cnn_rnn.rmse_last],
                                                                                                                 feed_dict={cnn_rnn.qtruePH: qtrue_val, cnn_rnn.measPH: meas_img_val, cnn_rnn.dropoutPH: dropout})
-                                                                print "Val Step: ", step, "CE: ",cev, " Accuracy: ", accv, "RMSE: ", errv, "CE last: ",ce_lv, " Accuracy last: ", acc_lv, "RMSE last: ", err_lv
+                                                                    print "Val Step: ", step, "CE: ",cev, " Accuracy: ", accv, "RMSE: ", errv, "CE last: ",ce_lv, " Accuracy last: ", acc_lv, "RMSE last: ", err_lv
 
-                                                                writer.writerow({'cost':cost,'cost_step':cost_step,'batches':batches,'learning rate':learning_rate,'batch_size':batch_size,'per_batch':per_batch,'dropout':dropout,'k_conv':k_conv,'n_conv1':n_conv1,'n_conv2':n_conv2,'n_layer':n_layer,'n_lstm':n_lstm,'n_steps':n_steps,'train step':-1,'xentropy':cev,'rmse':errv,'accuracy':accv,'xentropy_last':ce_lv,'rmse_last':err_lv,'accuracy_last':acc_lv})
-                                                                
-                                                            if (step % per_batch ==0 and step!=0) or acc_lv<acc_lv_prev:#generate a new batch if it's the right step or test ce is getting worse.
-                                                                batch_num = batch_num+1
-                                                                #pick a nth batch of batch_size
-                                                                print "New batch"
-                                                                meas_img = meas_img_all[batch_size*batch_num:(batch_size*(batch_num+1)),:,:,:,:]
-                                                                qtrue = qtrue_all[batch_size*batch_num:(batch_size*(batch_num+1)),:,:]
+                                                                    writer.writerow({'cost':cost,'cost_step':cost_step,'batches':batches,'learning rate':learning_rate,'batch_size':batch_size,'per_batch':per_batch,'dropout':dropout,'k_conv':k_conv,'n_conv1':n_conv1,'n_conv2':n_conv2,'n_layer':n_layer,'n_lstm':n_lstm,'n_steps':n_steps,'train step':-1,'xentropy':cev,'rmse':errv,'accuracy':accv,'xentropy_last':ce_lv,'rmse_last':err_lv,'accuracy_last':acc_lv})
+                                                                    step+=1
+                                                                if (step==per_batch and step!=0) or acc_lv<acc_lv_prev:#generate a new batch if it's the right step or test ce is getting worse.
+                                                                    batch_num+=1
+                                                                    #pick a nth batch of batch_size
+                                                                    print "New batch"
+                                                                    print test_size+val_size+batch_size*batch_num, test_size+val_size+batch_size*(batch_num+1)
+                                                                    meas_img = meas_img_all[(test_size+val_size+batch_size*batch_num):(test_size+val_size+batch_size*(batch_num+1)),:,:,:,:]
+                                                                    qtrue = qtrue_all[(test_size+val_size+batch_size*batch_num):(test_size+val_size+batch_size*(batch_num+1)),:,:]
 
                                                         #test batch
                                                         guess,cet,acct,errt,ce_lt,acc_lt,err_lt = session.run([cnn_rnn.qhat, cnn_rnn.cross, cnn_rnn.accuracy,cnn_rnn.rmse, cnn_rnn.cross_last, cnn_rnn.accuracy_last,cnn_rnn.rmse_last],
