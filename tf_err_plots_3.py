@@ -5,7 +5,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
 from matplotlib.ticker import LinearLocator, FormatStrFormatter
 import matplotlib.pyplot as plt
-
+import time
 fieldnames=['cost','cost_step','batches','learning rate','batch_size','per_batch','dropout','k_conv','n_conv1','n_conv2','n_layer','n_lstm','n_steps','train step','xentropy','rmse','accuracy','xentropy_last','rmse_last','accuracy_last']
 
 data=np.zeros([1,9])
@@ -14,6 +14,9 @@ try:
     reader=csv.reader(csvfile)
     rownum=0
     for row in reader:
+        print row
+        print len(row)
+        #time.sleep(1)
         if rownum==0:
             header=row
             col_cost=header.index("cost")
@@ -36,12 +39,14 @@ try:
             col_acc_last=header.index("accuracy_last")         
             col_ce_last=header.index("xentropy_last")     
         else:
-             
-            this=np.array([np.float(row[col_step]),np.float(row[col_n_layer]), np.float(row[col_n_lstm]),  np.float(row[col_rmse]),np.float(row[col_acc]), np.float(row[col_ce]), np.float(row[col_rmse_last]),np.float(row[col_acc_last]), np.float(row[col_ce_last])])
-            this=this.reshape([9,1]).T
-            data=np.append(data,this,axis=0)
-        
+            try: 
+                this=np.array([np.float(row[col_step]),np.float(row[col_n_layer]), np.float(row[col_n_lstm]),  np.float(row[col_rmse]),np.float(row[col_acc]), np.float(row[col_ce]), np.float(row[col_rmse_last]),np.float(row[col_acc_last]), np.float(row[col_ce_last])])
+                this=this.reshape([9,1]).T
+                data=np.append(data,this,axis=0)
+            except:
+                break
         rownum+=1
+            
 finally:
     csvfile.close()
 
@@ -55,7 +60,7 @@ col_rmse_last=6
 col_acc_last=7       
 col_ce_last=8   
 
-lstm_vals=[106,245,1884]
+lstm_vals=[100,300,1000]
 layer_vals=[1,2]
 
 err_col_vals=[3,4,5,6,7,8]
@@ -76,19 +81,16 @@ for ls in lstm_vals:
         
             col=colors[idx-1]
             lab='n_lstm='+str(ls)+', n_layers='+str(la)
-            picks = np.where(data[:,col_n_lstm]==ls)
-            picks = np.intersect1d(picks, np.where(data[:,col_n_layer]==la))
-            picks = np.intersect1d(picks, np.where(data[:,col_step]<=-1.0))
-            data_slice_xs=data[picks,col_step]
-            data_slice_ys=data[picks,e]
-            data_slice_x=np.zeros(data_slice_xs.shape)
-            data_slice_y=np.zeros(data_slice_ys.shape)
-            for i in range(0,len(data_slice_x)):
-                data_slice_x[i]=np.float(data_slice_xs[i])
-                data_slice_y[i]=np.float(data_slice_ys[i])
+            picks = np.where(abs(data[:,col_n_lstm]-ls)<.01)
+            picks = np.intersect1d(picks, np.where(abs(data[:,col_n_layer]-la)<.01))
+            picks = np.intersect1d(picks, np.where(data[:,col_step]>-1.0))
+            #print len(picks)
+            #time.sleep(1)
+            data_slice_x=data[picks,col_step]
+            data_slice_y=data[picks,e]
             plt.plot(data_slice_x.T, data_slice_y.T,col,label=lab)
             
-            plt.xlim(0,500.)
+            plt.xlim(0,500*5.)
             plt.ylabel(err_col_lab[edx-1])
             if edx==4:
                 plt.xlabel('Step')

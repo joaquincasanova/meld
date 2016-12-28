@@ -128,7 +128,7 @@ with open('./nn_real_rnn_lstm.csv','w') as csvfile:
             for learning_rate in [0.005]:
                 for batches in [5]:
                     for dropout in [.99]:
-                        for per_batch in [100]:
+                        for per_batch in [500]:
                             for batch_size in [(total_batch_size-test_size)/batches]:
                                 for k_conv in [3]:
                                     for n_conv1 in [3]:

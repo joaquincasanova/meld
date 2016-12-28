@@ -183,11 +183,11 @@ with open('./nn_real_rnn_ttv.csv','w') as csvfile:
                                                                     print "Val Step: ", step, "CE: ",cev, " Accuracy: ", accv, "RMSE: ", errv, "CE last: ",ce_lv, " Accuracy last: ", acc_lv, "RMSE last: ", err_lv
 
                                                                     writer.writerow({'cost':cost,'cost_step':cost_step,'batches':batches,'learning rate':learning_rate,'batch_size':batch_size,'per_batch':per_batch,'dropout':dropout,'k_conv':k_conv,'n_conv1':n_conv1,'n_conv2':n_conv2,'n_layer':n_layer,'n_lstm':n_lstm,'n_steps':n_steps,'train step':-1,'xentropy':cev,'rmse':errv,'accuracy':accv,'xentropy_last':ce_lv,'rmse_last':err_lv,'accuracy_last':acc_lv})
-                                                                    step+=1
-                                                                if (step==per_batch and step!=0) or acc_lv<acc_lv_prev:#generate a new batch if it's the right step or test ce is getting worse.
+                                                                step+=1
+                                                                if (step==per_batch and step!=0):#
                                                                     batch_num+=1
                                                                     #pick a nth batch of batch_size
-                                                                    print "New batch"
+                                                                    print "New batch", batch_num
                                                                     print test_size+val_size+batch_size*batch_num, test_size+val_size+batch_size*(batch_num+1)
                                                                     meas_img = meas_img_all[(test_size+val_size+batch_size*batch_num):(test_size+val_size+batch_size*(batch_num+1)),:,:,:,:]
                                                                     qtrue = qtrue_all[(test_size+val_size+batch_size*batch_num):(test_size+val_size+batch_size*(batch_num+1)),:,:]
