@@ -81,14 +81,16 @@ for ls in lstm_vals:
         
             col=colors[idx-1]
             lab='n_lstm='+str(ls)+', n_layers='+str(la)
-            picks = np.where(abs(data[:,col_n_lstm]-ls)<.01)
-            picks = np.intersect1d(picks, np.where(abs(data[:,col_n_layer]-la)<.01))
-            picks = np.intersect1d(picks, np.where(data[:,col_step]>-1.0))
+            picks = np.where(data[:,col_n_lstm]==ls)
+            picks = np.intersect1d(picks, np.where(data[:,col_n_layer]==la))
+            picks = np.intersect1d(picks, np.where(data[:,col_step]>=0))
             #print len(picks)
             #time.sleep(1)
-            data_slice_x=data[picks,col_step]
-            data_slice_y=data[picks,e]
-            plt.plot(data_slice_x.T, data_slice_y.T,col,label=lab)
+            data_slice_x=data[picks,col_step].reshape([1,-1])
+            
+            data_slice_xp=np.arange(0,data_slice_x.shape[1]).reshape([1,-1])
+            data_slice_y=data[picks,e].reshape([1,-1])
+            plt.plot(data_slice_xp.T, data_slice_y.T,col,label=lab)
             
             plt.xlim(0,500*5.)
             plt.ylabel(err_col_lab[edx-1])
