@@ -131,8 +131,8 @@ with open('./nn_real_rnn_reg.csv','w') as csvfile:
                             for per_batch in [500]:
                                 for batch_size in [100]:
                                     total_batch_size-batches*batch_size
-                                    test_size = int((total_batch_size-batches*batch_size)/2)
-                                    val_size = total_batch_size-test_size-batches*batch_size
+                                    test_size = 44
+                                    val_size = 45
                                     print test_size, val_size, batch_size, total_batch_size
                                     for k_conv in [3]:
                                         for n_conv1 in [3]:
@@ -158,7 +158,7 @@ with open('./nn_real_rnn_reg.csv','w') as csvfile:
                                                         print test_size, test_size+val_size
                                                         #pick a first batch of batch_size
                                                         batch_num=0
-                                                        choose = np.random.choice(total_batch_size-test_size-val_size,batch_size)
+                                                        choose = np.random.choice(total_batch_size-test_size-val_size,batch_size,replace=False)
                                                         meas_img = meas_img_all[(test_size+val_size+choose),:,:,:,:]
                                                         qtrue = qtrue_all[(test_size+val_size+choose),:,:]
                                                         batch_num = 0
@@ -195,7 +195,7 @@ with open('./nn_real_rnn_reg.csv','w') as csvfile:
                                                                     #pick a nth batch of batch_size
                                                                     print "New batch", batch_num
 
-                                                                    choose = np.random.choice(total_batch_size-test_size-val_size,batch_size)
+                                                                    choose = np.random.choice(total_batch_size-test_size-val_size,batch_size,replace=False)
                                                                     meas_img = meas_img_all[(test_size+val_size+choose),:,:,:,:]
                                                                     qtrue = qtrue_all[(test_size+val_size+choose),:,:]
                                                                     print choose
