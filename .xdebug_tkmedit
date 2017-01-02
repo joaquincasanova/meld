@@ -1,0 +1,10 @@
+tkmedit started: Wed Dec 14 08:23:27 2016
+
+	/home/jcasa/freesurfer/tktools/tkmedit.bin -f /home/jcasa/mne_data/openfmri/ds117/subjects//sub004/mri/flash/parameter_maps/T1.mgz 
+
+$Id: tkmedit.c,v 1.348 2014/11/06 16:47:49 greve Exp $ $Name:  $
+Set user home dir to /home/jcasa/meld/code/python/inverse
+Set subject home dir to /home/jcasa/mne_data/openfmri/ds117/subjects//sub004/mri/flash/parameter_maps/T1.mgz
+Using interface file /home/jcasa/freesurfer/tktools/tkmedit.tcl
+Tcl: Successfully parsed tkmedit.tcl
+Tcl: Successfully parsed tkm_functional.tcl

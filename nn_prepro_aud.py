@@ -45,19 +45,22 @@ epochs_meg = epochs.copy().pick_types(meg=True,eeg=False)
 
 n_eeg = epochs_eeg.get_data().shape[1]
 
-eeg_xyz = epochs_eeg.info['chs'][0]['loc'][:3].reshape([1,3])
+#eeg_xyz = epochs_eeg.info['chs'][0]['loc'][:3].reshape([1,3])
 eeg_data = np.array(epochs_eeg.get_data())#batch_sizexmxn_steps
 
-for i in range(1,n_eeg):
-    eeg_xyz=np.vstack((eeg_xyz,epochs_eeg.info['chs'][i]['loc'][:3].reshape([1,3])))
+eeg_xyz=np.squeeze(np.array([epochs_eeg.info['chs'][i]['loc'][:3].reshape([1,3]) for i in range(0,n_eeg)]))
+
+#for i in range(1,n_eeg):
+#    eeg_xyz=np.vstack((eeg_xyz,epochs_eeg.info['chs'][i]['loc'][:3].reshape([1,3])))
 
 n_meg = epochs_meg.get_data().shape[1]
 
-meg_xyz = epochs_meg.info['chs'][0]['loc'][:3].reshape([1,3])
+#meg_xyz = epochs_meg.info['chs'][0]['loc'][:3].reshape([1,3])
 meg_data = np.array(epochs_meg.get_data())#batch_sizexmxn_steps
+meg_xyz=np.squeeze(np.array([epochs_meg.info['chs'][i]['loc'][:3].reshape([1,3]) for i in range(0,n_meg)]))
 
-for i in range(1,n_meg):
-    meg_xyz=np.vstack((meg_xyz,epochs_meg.info['chs'][i]['loc'][:3].reshape([1,3])))
+#for i in range(1,n_meg):
+#    meg_xyz=np.vstack((meg_xyz,epochs_meg.info['chs'][i]['loc'][:3].reshape([1,3])))
 
 noise_cov = mne.compute_covariance(
     epochs, tmax=0., method=['shrunk', 'empirical'])
@@ -97,12 +100,12 @@ total_batch_size = len(stc)#number of events. we'll consider each event an examp
 
 n_steps=meg_data.shape[2]
 
-dipole=stc[0]._data
-for i in range(1,total_batch_size):
-    dipole=np.dstack((dipole,stc[i]._data))
+
+dipole=np.array([stc[i]._data for i in range(0,len(stc))]).transpose((1,2,0))
 #pxn_stepsxbatchsize
 qtrue_all,p=meas_class.scale_dipole(dipole)
 #bxnxp
+
 
 
 #meas_meg_in n_stepsxmxbatchsize

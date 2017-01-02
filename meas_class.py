@@ -1,7 +1,8 @@
 import numpy as np
 from numpy import matlib
 import sphere
-import scipy
+###import scipy
+from scipy import interpolate as interp
 from matplotlib.mlab import PCA
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
@@ -22,7 +23,7 @@ def scale_dipole(dipole_in):
     #q[ppp,[range(0,qq.shape[1])]]=1.0#qq is pxbatch_size*n_steps
     #ONE-HOT!!! convert to one-hot for tf neural net
     #don't do that if fitting current density. in fact it's redundant if you use cross-entropy as the cost function.
-    #(qq-np.amin(qq,axis=0))/(np.amax(qq,axis=0)-np.amin(qq,axis=0)))
+    #q=(qq-np.amin(qq,axis=0))/(np.amax(qq,axis=0)-np.amin(qq,axis=0))
     print "Dipoles now reshaped for TF NN."#as one-hot encoding"
     q=qq
     qtrue=q.reshape([p,b,n]).transpose((1,2,0))#bxnxp
@@ -91,9 +92,13 @@ class meas:
         self.R0=[r0,r1]
 
     def pca(self):
-        for channel in [0,1]:
-            mPCA=PCA(self.meas_in[channel])
-            self.meas_in[channel]=mPCA.Y
+        for [channel,m] in [[0,self.m0],[1,self.m1]]:
+            if self.batch_size*self.n_steps>m:
+                mPCA=PCA(self.meas_in[channel].T)
+                self.meas_in[channel]=mPCA.Y.T
+            else:
+                mPCA=PCA(self.meas_in[channel])
+                self.meas_in[channel]=mPCA.Y
 
     def scale(self):
         for channel in [0,1]:
@@ -107,6 +112,7 @@ class meas:
         f=np.zeros((self.m,self.n_steps*self.batch_size))
         g=np.zeros((self.m,self.n_steps*self.batch_size))
         self.meas_out=[f,g]
+        
         for channel in [0,1]:
             print "Channel ", channel
             for step in range(0,self.n_steps*self.batch_size):
@@ -114,11 +120,12 @@ class meas:
                 a=np.squeeze(self.AZ0[channel])
                 b=np.squeeze(self.EL0[channel])
                 c=np.squeeze(self.meas_in[channel][:,step])
-                out=scipy.interpolate.griddata((a,b),c,(self.AZ,self.EL),method='nearest')
+                #
+                out=interp.griddata((a,b),c,(self.AZ,self.EL),method='nearest')
                 #print "Apply interp function for step ", step
                 self.meas_out[channel][:,step]=out.ravel()
                 #mxbatch_size*n_steps
-
+        del self.X0, self.Y0,self.Z0, self.R0,self.AZ0, self.EL0, self.meas_in, self.meas_xyz
     def reshape(self):
         self.meas_img=np.array(self.meas_out).reshape([2,-1,self.batch_size,self.n_steps])#2xmxbatchsizexnsteps
         self.meas_img=np.transpose(self.meas_img,(2,3,0,1))#batch_sizexnstepsx2xm
