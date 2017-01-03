@@ -12,7 +12,7 @@ from mne.datasets import sample
 from mne.minimum_norm import (make_inverse_operator, apply_inverse,
                               write_inverse_operator, apply_inverse_epochs,
                               read_inverse_operator)
-def aud_dataset(pca=False):
+def aud_dataset(pca=False,subsample=1):
     ###############################################################################
     # Setup for reading the raw data
     data_path = sample.data_path()
@@ -97,7 +97,7 @@ def aud_dataset(pca=False):
     dipole=np.array([stc[i]._data for i in range(0,len(stc))]).transpose((1,2,0))
     #pxn_stepsxbatchsize
 
-    qtrue_all,p=meas_class.scale_dipole(dipole)
+    qtrue_all,p=meas_class.scale_dipole(dipole,subsample=subsample)
     #bxnxp
 
 
@@ -118,7 +118,7 @@ def aud_dataset(pca=False):
     return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size 
 
 
-def faces_dataset(subject_id,pca=False):
+def faces_dataset(subject_id,pca=False,subsample=1):
     study_path = '/home/jcasa/mne_data/openfmri'
     subjects_dir = os.path.join(study_path, 'subjects')
     meg_dir = os.path.join(study_path, 'MEG')
@@ -178,7 +178,7 @@ def faces_dataset(subject_id,pca=False):
     dipole=np.array([stc[i]._data for i in range(0,len(stc))]).transpose((1,2,0))
     
     #pxn_stepsxbatchsize
-    qtrue_all,p=meas_class.scale_dipole(dipole)
+    qtrue_all,p=meas_class.scale_dipole(dipole,subsample=subsample)
     #bxnxp
     
     return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size 

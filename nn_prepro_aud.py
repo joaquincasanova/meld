@@ -103,7 +103,7 @@ n_steps=meg_data.shape[2]
 
 dipole=np.array([stc[i]._data for i in range(0,len(stc))]).transpose((1,2,0))
 #pxn_stepsxbatchsize
-qtrue_all,p=meas_class.scale_dipole(dipole)
+qtrue_all,p=meas_class.scale_dipole(dipole,subsample=10)
 #bxnxp
 
 

@@ -13,17 +13,19 @@ import meas_class
 import nn_prepro
 ###############################################################################
 
-meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size=nn_prepro.aud_dataset(pca=True)
+#meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size=nn_prepro.aud_dataset(pca=True, subsample=10)
+
+meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size=nn_prepro.faces_dataset(pca=True, subsample=10)
 
 fieldnames=['cost','cost_step','batches','learning rate','batch_size','per_batch','dropout','beta','k_conv','n_conv1','n_conv2','n_layer','n_lstm','n_steps','train step','xentropy','rmse','accuracy','xentropy_last','rmse_last','accuracy_last']
 
-with open('./nn_real_pca_lstm.csv','w') as csvfile:
+with open('./nn_real_subsample_faces.csv','w') as csvfile:
     writer=csv.DictWriter(csvfile,fieldnames=fieldnames)
     writer.writeheader()
     for cost in ['cross']:
         for cost_step in ['last']:
-            for learning_rate in [0.001]:
-                for batches in [10]:
+            for learning_rate in [0.005]:
+                for batches in [5]:
                     for dropout in [1.0]:
                         for beta in [0.]:
                             for per_batch in [500]:
@@ -87,7 +89,7 @@ with open('./nn_real_pca_lstm.csv','w') as csvfile:
 
                                                                     writer.writerow({'cost':cost,'cost_step':cost_step,'batches':batches,'learning rate':learning_rate,'batch_size':batch_size,'per_batch':per_batch,'dropout':dropout,'beta':beta,'k_conv':k_conv,'n_conv1':n_conv1,'n_conv2':n_conv2,'n_layer':n_layer,'n_lstm':n_lstm,'n_steps':n_steps,'train step':-1,'xentropy':cev,'rmse':errv,'accuracy':accv,'xentropy_last':ce_lv,'rmse_last':err_lv,'accuracy_last':acc_lv})
                                                                 step+=1
-                                                                if (step==per_batch and step!=0) or (acc_lv-acc_lv_prev)<-.1 or acc_l>.95:#
+                                                                if (step==(per_batch) and step!=0) or (acc_lv-acc_lv_prev)<-.1 or (acc_l>.95 and step>val_step):#
                                                                     batch_num+=1
                                                                     print (acc_lv-acc_lv_prev)
                                                                     #pick a nth batch of batch_size
@@ -107,6 +109,6 @@ with open('./nn_real_pca_lstm.csv','w') as csvfile:
                                                                         feed_dict={cnn_rnn.qtruePH: qtrue_test, cnn_rnn.measPH: meas_img_test, cnn_rnn.dropoutPH: dropout, cnn_rnn.betaPH: beta})
                                                             print "Test Step: ", step, "CE: ",cet, " Accuracy: ", acct, "RMSE: ", errt, "CE last: ",ce_lt, " Accuracy last: ", acc_lt, "RMSE last: ", err_lt
 
-                                                            writer.writerow({'cost':cost,'cost_step':cost_step,'batches':batches,'learning rate':learning_rate,'batch_size':batch_size,'per_batch':per_batch,'dropout':dropout,'beta':beta,'k_conv':k_conv,'n_conv1':n_conv1,'n_conv2':n_conv2,'n_layer':n_layer,'n_lstm':n_lstm,'n_steps':n_steps,'train step':-2,'xentropy':ce,'rmse':err,'accuracy':acc,'xentropy_last':ce_l,'rmse_last':err_l,'accuracy_last':acc_l})
+                                                            writer.writerow({'cost':cost,'cost_step':cost_step,'batches':batches,'learning rate':learning_rate,'batch_size':batch_size,'per_batch':per_batch,'dropout':dropout,'beta':beta,'k_conv':k_conv,'n_conv1':n_conv1,'n_conv2':n_conv2,'n_layer':n_layer,'n_lstm':n_lstm,'n_steps':n_steps,'train step':-2,'xentropy':cet,'rmse':errt,'accuracy':acct,'xentropy_last':ce_lt,'rmse_last':err_lt,'accuracy_last':acc_lt})
 
     csvfile.close()

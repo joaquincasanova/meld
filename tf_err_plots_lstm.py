@@ -6,10 +6,10 @@ from matplotlib import cm
 from matplotlib.ticker import LinearLocator, FormatStrFormatter
 import matplotlib.pyplot as plt
 import time
-fieldnames=['cost','cost_step','batches','learning rate','batch_size','per_batch','dropout','k_conv','n_conv1','n_conv2','n_layer','n_lstm','n_steps','train step','xentropy','rmse','accuracy','xentropy_last','rmse_last','accuracy_last']
+fieldnames=['cost','cost_step','batches','learning rate','batch_size','per_batch','dropout','beta','k_conv','n_conv1','n_conv2','n_layer','n_lstm','n_steps','train step','xentropy','rmse','accuracy','xentropy_last','rmse_last','accuracy_last']
 
 data=np.zeros([1,9])
-csvfile = open('./nn_real_rnn_ttv.csv','r')
+csvfile = open('./nn_real_no_subsample.csv','r')
 try:
     reader=csv.reader(csvfile)
     rownum=0
@@ -27,6 +27,7 @@ try:
             col_rate=header.index("learning rate")
             col_per=header.index("per_batch")
             col_drop=header.index("dropout")
+            col_beta=header.index("beta")
             col_cost=header.index("cost")
             col_n_lstm=header.index("n_lstm")
             col_n_layer=header.index("n_layer")        
@@ -60,7 +61,7 @@ col_rmse_last=6
 col_acc_last=7       
 col_ce_last=8   
 
-lstm_vals=[100,300,1000]
+lstm_vals=[10,100,300]
 layer_vals=[1,2]
 
 err_col_vals=[3,4,5,6,7,8]
@@ -84,6 +85,16 @@ for ls in lstm_vals:
             picks = np.where(data[:,col_n_lstm]==ls)
             picks = np.intersect1d(picks, np.where(data[:,col_n_layer]==la))
             picks = np.intersect1d(picks, np.where(data[:,col_step]>=0))
+            test = np.where(data[:,col_n_lstm]==ls)
+            test = np.intersect1d(test, np.where(data[:,col_n_layer]==la))
+            test = np.intersect1d(test, np.where(data[:,col_step]<=-2))
+            test_acc_last=data[test,7]
+            val= np.where(data[:,col_n_lstm]==ls)
+            val = np.intersect1d(val, np.where(data[:,col_n_layer]==la))
+            val = np.intersect1d(val, np.where(data[:,col_step]==-1))
+            val_acc_last=np.mean(data[val,7])
+            lab='n_lstm='+str(ls)+', n_layers='+str(la)+', val accuracy='+str(val_acc_last)
+             
             #print len(picks)
             #time.sleep(1)
             data_slice_x=data[picks,col_step].reshape([1,-1])

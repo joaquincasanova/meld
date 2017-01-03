@@ -9,8 +9,9 @@ from matplotlib import cm
 from matplotlib.ticker import LinearLocator, FormatStrFormatter
 import matplotlib.pyplot as plt
 
-def scale_dipole(dipole_in):
+def scale_dipole(dipole_in,subsample=1):
     #dipole_in is pxnxb
+    dipole_in=dipole_in[range(0,dipole_in.shape[0],subsample)]
     p=dipole_in.shape[0]
     n=dipole_in.shape[1]
     b=dipole_in.shape[2]
