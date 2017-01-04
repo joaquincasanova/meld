@@ -12,7 +12,7 @@ from mne.datasets import sample
 from mne.minimum_norm import (make_inverse_operator, apply_inverse,
                               write_inverse_operator, apply_inverse_epochs,
                               read_inverse_operator)
-def aud_dataset(pca=False,subsample=1):
+def aud_dataset(selection='all',pca=False,subsample=1,justdims=True,cnn=True):
     ###############################################################################
     # Setup for reading the raw data
     data_path = sample.data_path()
@@ -41,21 +41,9 @@ def aud_dataset(pca=False,subsample=1):
 
     epochs = mne.Epochs(raw, events, event_id, tmin, tmax, proj=True, picks=picks,
                         baseline=baseline, reject=reject, add_eeg_ref=False, preload=True)
-
     epochs_eeg = epochs.copy().pick_types(eeg=True,meg=False)
     epochs_meg = epochs.copy().pick_types(meg=True,eeg=False)
 
-    n_eeg = epochs_eeg.get_data().shape[1]
-
-    eeg_data = np.array(epochs_eeg.get_data())#batch_sizexmxn_steps
-
-    eeg_xyz=np.squeeze(np.array([epochs_eeg.info['chs'][i]['loc'][:3].reshape([1,3]) for i in range(0,n_eeg)]))
-
-    n_meg = epochs_meg.get_data().shape[1]
-
-    meg_data = np.array(epochs_meg.get_data())#batch_sizexmxn_steps
-
-    meg_xyz=np.squeeze(np.array([epochs_meg.info['chs'][i]['loc'][:3].reshape([1,3]) for i in range(0,n_meg)]))
 
     noise_cov = mne.compute_covariance(
         epochs, tmax=0., method=['shrunk', 'empirical'])
@@ -90,35 +78,15 @@ def aud_dataset(pca=False,subsample=1):
     stc = apply_inverse_epochs(epochs, inverse_operator, lambda2,
                         method=method, pick_ori=None)
     #stc.save('sample_audvis-source-epochs')
-
-    total_batch_size = len(stc)#number of events. we'll consider each event an example.
-
-    n_steps=meg_data.shape[2]
-    dipole=np.array([stc[i]._data for i in range(0,len(stc))]).transpose((1,2,0))
-    #pxn_stepsxbatchsize
-
-    qtrue_all,p=meas_class.scale_dipole(dipole,subsample=subsample)
-    #bxnxp
-
-
-    #meas_meg_in n_stepsxmxbatchsize
-    #meas_eeg_in n_stepsxmxbatchsize
-    meas_dims=[11,11]
-    print "Image grid dimensions: ", meas_dims
-    tf_meas = meas_class.meas(meg_data,meg_xyz, eeg_data,eeg_xyz, meas_dims, n_steps, total_batch_size)
-    if pca is True:
-        tf_meas.pca()
+ 
+    if justdims is True:
+        meas_dims, m, p, n_steps, total_batch_size = prepro(stc, epochs, epochs_eeg,epochs_meg,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn)
+        return meas_dims, m, p, n_steps, total_batch_size
     else:
-        tf_meas.scale()
-    tf_meas.interp()
-    tf_meas.reshape()
-    #tf_meas.plot(1)
-    meas_img_all = tf_meas.meas_img
-    m = tf_meas.m
-    return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size 
+        meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size = prepro(stc, epochs, epochs_eeg,epochs_meg,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn)
+        return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size 
 
-
-def faces_dataset(subject_id,pca=False,subsample=1):
+def faces_dataset(subject_id,selection='all',pca=False,subsample=1,justdims=True):
     study_path = '/home/jcasa/mne_data/openfmri'
     subjects_dir = os.path.join(study_path, 'subjects')
     meg_dir = os.path.join(study_path, 'MEG')
@@ -147,38 +115,121 @@ def faces_dataset(subject_id,pca=False,subsample=1):
     lambda2 = 1. / snr ** 2
     stc = apply_inverse_epochs(epochs, inv, lambda2,
                         method=method, pick_ori=None)
-    total_batch_size = len(stc)#number of events. we'll consider each event an example.
-    n_eeg = epochs_eeg.get_data().shape[1]
-
-    eeg_data = np.array(epochs_eeg.get_data())#batch_sizexmxn_steps
-
-    eeg_xyz=np.squeeze(np.array([epochs_eeg.info['chs'][i]['loc'][:3].reshape([1,3]) for i in range(0,n_eeg)]))
-
-    n_meg = epochs_meg.get_data().shape[1]
-
-    meg_data = np.array(epochs_meg.get_data())#batch_sizexmxn_steps
-
-    meg_xyz=np.squeeze(np.array([epochs_meg.info['chs'][i]['loc'][:3].reshape([1,3]) for i in range(0,n_meg)]))
-
-    n_steps=meg_data.shape[2]
     
-    meas_dims=[11,11]
-    print "Image grid dimensions: ", meas_dims
-    tf_meas = meas_class.meas(meg_data,meg_xyz, eeg_data,eeg_xyz, meas_dims, n_steps, total_batch_size)
-    if pca is True:
-        tf_meas.pca()
+    if justdims is True:
+        meas_dims, m, p, n_steps, total_batch_size = prepro(stc, epochs, epochs_eeg,epochs_meg,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn)
+        return meas_dims, m, p, n_steps, total_batch_size
     else:
-        tf_meas.scale()
-    tf_meas.interp()
-    tf_meas.reshape()
-    #tf_meas.plot(1)
-    meas_img_all = tf_meas.meas_img
-    m = tf_meas.m
+        meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size = prepro(stc, epochs, epochs_eeg,epochs_meg,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn)
+        return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size 
 
-    dipole=np.array([stc[i]._data for i in range(0,len(stc))]).transpose((1,2,0))
-    
-    #pxn_stepsxbatchsize
-    qtrue_all,p=meas_class.scale_dipole(dipole,subsample=subsample)
-    #bxnxp
-    
-    return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size 
+
+def prepro(stc, epochs, epochs_eeg,epochs_meg,selection='all',pca=False,subsample=1,justdims=True,cnn=True):
+    if cnn is True:
+        if justdims is True:
+            total_batch_size = len(stc)#number of events. we'll consider each event an example.
+            p = stc[0]._data.shape[0]
+            n_steps = stc[0]._data.shape[1]
+            meas_dims=[11,11]
+            m = meas_dims[0]*meas_dims[1]
+            del stc, epochs, epochs_eeg, epochs_meg
+            return meas_dims, m, p, n_steps, total_batch_size
+        else:
+            if selection is 'all':
+                total_batch_size = len(stc)#number of events. we'll consider each event an example.
+            else:
+                total_batch_size = len(selection)#number of events. we'll consider each event an example.
+
+            n_eeg = epochs_eeg.get_data().shape[1]
+
+            eeg_xyz=np.squeeze(np.array([epochs_eeg.info['chs'][i]['loc'][:3].reshape([1,3]) for i in range(0,n_eeg)]))
+
+            n_meg = epochs_meg.get_data().shape[1]
+
+            meg_xyz=np.squeeze(np.array([epochs_meg.info['chs'][i]['loc'][:3].reshape([1,3]) for i in range(0,n_meg)]))
+
+            if selection is 'all':
+                eeg_data = np.array(epochs_eeg.get_data())#batch_sizexmxn_steps
+                meg_data = np.array(epochs_meg.get_data())#batch_sizexmxn_steps
+            else:
+                eeg_data = np.array(epochs_eeg.get_data())[selection,:,:]#batch_sizexmxn_steps
+                meg_data = np.array(epochs_meg.get_data())[selection,:,:]#batch_sizexmxn_steps
+
+            n_steps=meg_data.shape[2]
+
+            meas_dims=[11,11]
+            print "Image grid dimensions: ", meas_dims
+            tf_meas = meas_class.meas(meg_data,meg_xyz, eeg_data,eeg_xyz, meas_dims, n_steps, total_batch_size)
+            if pca is True:
+                tf_meas.pca()
+            else:
+                tf_meas.scale()
+            tf_meas.interp()
+            tf_meas.reshape()
+            #tf_meas.plot(1)
+            meas_img_all = tf_meas.meas_img
+            m = tf_meas.m
+
+            if selection is 'all':
+                dipole=np.array([stc[i]._data for i in range(0,len(stc))]).transpose((1,2,0))
+            else:
+                dipole=np.array([stc[i]._data for i in selection]).transpose((1,2,0))
+
+            #pxn_stepsxbatchsize
+            qtrue_all,p=meas_class.scale_dipole(dipole,subsample=subsample)
+            #bxnxp
+            del stc, epochs, epochs_eeg, epochs_meg
+            return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size 
+    else:
+        if justdims is True:
+            total_batch_size = len(stc)#number of events. we'll consider each event an example.
+            p = stc[0]._data.shape[0]
+            n_steps = stc[0]._data.shape[1]
+            meas_dims=epochs.get_data().shape[1]
+            m = meas_dims
+            del stc, epochs, epochs_eeg, epochs_meg
+            return meas_dims, m, p, n_steps, total_batch_size
+        else:
+            if selection is 'all':
+                total_batch_size = len(stc)#number of events. we'll consider each event an example.
+            else:
+                total_batch_size = len(selection)#number of events. we'll consider each event an example.
+
+            n_eeg = epochs_eeg.get_data().shape[1]
+
+            eeg_xyz=np.squeeze(np.array([epochs_eeg.info['chs'][i]['loc'][:3].reshape([1,3]) for i in range(0,n_eeg)]))
+
+            n_meg = epochs_meg.get_data().shape[1]
+
+            meg_xyz=np.squeeze(np.array([epochs_meg.info['chs'][i]['loc'][:3].reshape([1,3]) for i in range(0,n_meg)]))
+
+            if selection is 'all':
+                eeg_data = np.array(epochs_eeg.get_data())#batch_sizexmxn_steps
+                meg_data = np.array(epochs_meg.get_data())#batch_sizexmxn_steps
+            else:
+                eeg_data = np.array(epochs_eeg.get_data())[selection,:,:]#batch_sizexmxn_steps
+                meg_data = np.array(epochs_meg.get_data())[selection,:,:]#batch_sizexmxn_steps
+
+            n_steps=meg_data.shape[2]
+
+            meas_dims=n_eeg+n_meg
+            print "Meas dims in: ", meas_dims
+            tf_meas = meas_class.meas(meg_data,meg_xyz, eeg_data,eeg_xyz, meas_dims, n_steps, total_batch_size)
+            if pca is True:
+                tf_meas.pca()
+            else:
+                tf_meas.scale()
+            tf_meas.stack_reshape()
+            meas_img_all = tf_meas.meas_stack
+            m = tf_meas.m
+
+            if selection is 'all':
+                dipole=np.array([stc[i]._data for i in range(0,len(stc))]).transpose((1,2,0))
+            else:
+                dipole=np.array([stc[i]._data for i in selection]).transpose((1,2,0))
+
+            #pxn_stepsxbatchsize
+            qtrue_all,p=meas_class.scale_dipole(dipole,subsample=subsample)
+            #bxnxp
+            del stc, epochs, epochs_eeg, epochs_meg
+            return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size 

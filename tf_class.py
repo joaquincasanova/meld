@@ -15,7 +15,7 @@ def max_pool(img, k):
                           padding='VALID')
 
 class tf_meld:
-    def __init__(self,learning_rate,meas_dims,k_conv,k_pool,n_chan_in,n_conv1,n_conv2,n_out,n_steps=None,n_lstm=None,n_layer=None,cost_func='cross',cost_time='all', beta=0.0):
+    def __init__(self,learning_rate,meas_dims,k_conv,k_pool,n_chan_in,n_conv1,n_conv2,n_out,n_steps=None,n_lstm=None,n_layer=None,cost_func='cross',cost_time='all', beta=0.0, cnn='True'):
         self.learning_rate=learning_rate
         print "learning rate: ", self.learning_rate
         self.meas_dims=meas_dims
@@ -49,56 +49,79 @@ class tf_meld:
         print "cost_time: ", self.cost_time
         self.beta=beta
         print "beta: ", self.beta
+        self.cnn=cnn
+        print self.cnn
     def network(self):
         
         self.dropoutPH = tf.placeholder(tf.float32, name="dropout")
         self.betaPH =  tf.placeholder(tf.float32, name="beta")
-        
-        if  self.n_steps is None:
-            self.measPH=tf.placeholder(tf.float32,shape=(None,self.meas_dims[0],self.meas_dims[1],self.n_chan_in), name="meas")
-            self.qtruePH=tf.placeholder(tf.float32,shape=(None, self.n_out), name="qtrue")
+
+        if self.cnn is True:
+            if  self.n_steps is None:
+                self.measPH=tf.placeholder(tf.float32,shape=(None,self.meas_dims[0],self.meas_dims[1],self.n_chan_in), name="meas")
+                self.qtruePH=tf.placeholder(tf.float32,shape=(None, self.n_out), name="qtrue")
+            else:
+                self.measPH=tf.placeholder(tf.float32,shape=(None, self.n_steps, self.meas_dims[0], self.meas_dims[1],self.n_chan_in), name="meas")
+                self.qtruePH=tf.placeholder(tf.float32,shape=(None, self.n_steps, self.n_out), name="qtrue")
+            # Store layers weight & bias
+
+            with tf.name_scope('convolutional_layer_1'):
+                wc1 = tf.Variable(tf.random_normal([self.k_conv, self.k_conv, self.n_chan_in, self.n_conv1])) # kxk conv, 2 input, n_conv outputs
+                bc1 = tf.Variable(tf.random_normal([self.n_conv1]))
+
+                if self.n_steps is None:
+                    conv1 = conv2d(self.measPH,wc1,bc1,name="conv1")
+                else:
+                    #reshape to fold batch and timestep indices, needed for compatibility with conv2d
+                    measfold = tf.reshape(self.measPH,[-1,self.meas_dims[0], self.meas_dims[1], self.n_chan_in])
+                    conv1 = conv2d(measfold,wc1,bc1,name="conv1")
+
+                conv1 = max_pool(conv1,k=self.k_pool)
+
+                # Apply Dropout
+                conv1 = tf.nn.dropout(conv1,self.dropoutPH)
+
+            with tf.name_scope('convolutional_layer_2'):
+                wc2 = tf.Variable(tf.random_normal([self.k_conv, self.k_conv, self.n_conv1, self.n_conv2])) # kxk conv, 2 input, n_conv outputs
+                bc2 = tf.Variable(tf.random_normal([self.n_conv2]))
+                conv2 = conv2d(conv1,wc2,bc2,name="conv2" )
+                # Apply Dropout
+                conv2 = tf.nn.dropout(conv2, self.dropoutPH)
+
+            with tf.name_scope('dense_layer'):
+                if self.n_steps is None:
+                    wd = tf.Variable(tf.random_normal([self.n_dense, self.n_out])) # fully connected, image inputs, n_out outputs
+                    bd = tf.Variable(tf.random_normal([self.n_out]))
+                    dense = tf.reshape(conv2, [-1, self.n_dense]) # Reshape conv2 output to fit dense layer input
+                    logits = tf.add(tf.matmul(dense,wd),bd)#logits
+                    self.qhat = tf.nn.softmax(logits,name="qhat")
+                else:
+                    dense = tf.reshape(conv2, [-1, self.n_dense]) # Reshape conv1 output to fit dense layer input
+                    wd = tf.Variable(tf.truncated_normal([self.n_dense, self.n_lstm], stddev=0.1))
+                    bd = tf.Variable(tf.constant(0.1, shape=[self.n_lstm]))
+                    dense_out = tf.nn.softmax(tf.matmul(dense, wd) + bd,name="dense_out")
+                    dense_out = tf.nn.dropout(dense_out, self.dropoutPH)
         else:
-            self.measPH=tf.placeholder(tf.float32,shape=(None, self.n_steps, self.meas_dims[0], self.meas_dims[1],self.n_chan_in), name="meas")
-            self.qtruePH=tf.placeholder(tf.float32,shape=(None, self.n_steps, self.n_out), name="qtrue")
-        # Store layers weight & bias
-
-        with tf.name_scope('convolutional_layer_1'):
-            wc1 = tf.Variable(tf.random_normal([self.k_conv, self.k_conv, self.n_chan_in, self.n_conv1])) # kxk conv, 2 input, n_conv outputs
-            bc1 = tf.Variable(tf.random_normal([self.n_conv1]))
-
-            if self.n_steps is None:
-                conv1 = conv2d(self.measPH,wc1,bc1,name="conv1")
+            if  self.n_steps is None:
+                self.measPH=tf.placeholder(tf.float32,shape=(None,self.meas_dims), name="meas")
+                self.qtruePH=tf.placeholder(tf.float32,shape=(None, self.n_out), name="qtrue")
             else:
-                #reshape to fold batch and timestep indices, needed for compatibility with conv2d
-                measfold = tf.reshape(self.measPH,[-1,self.meas_dims[0], self.meas_dims[1], self.n_chan_in])
-                conv1 = conv2d(measfold,wc1,bc1,name="conv1")
+                self.measPH=tf.placeholder(tf.float32,shape=(None, self.n_steps, self.meas_dims), name="meas")
+                self.qtruePH=tf.placeholder(tf.float32,shape=(None, self.n_steps, self.n_out), name="qtrue")
+
+            with tf.name_scope('dense_layer'):
+                if self.n_steps is None:
+                    wd = tf.Variable(tf.random_normal([self.meas_dims, self.n_out])) # fully connected, image inputs, n_out outputs
+                    bd = tf.Variable(tf.random_normal([self.n_out]))
+                    logits = tf.add(tf.matmul(self.measPH,wd),bd)#logits
+                    self.qhat = tf.nn.softmax(logits,name="qhat")
+                else:
+                    dense = tf.reshape(self.measPH, [-1, self.meas_dims]) # Reshape input to fit dense layer input
+                    wd = tf.Variable(tf.truncated_normal([self.n_dense, self.n_lstm], stddev=0.1))
+                    bd = tf.Variable(tf.constant(0.1, shape=[self.n_lstm]))
+                    dense_out = tf.nn.softmax(tf.matmul(dense, wd) + bd,name="dense_out")
+                    dense_out = tf.nn.dropout(dense_out, self.dropoutPH)
                 
-            conv1 = max_pool(conv1,k=self.k_pool)
-
-            # Apply Dropout
-            conv1 = tf.nn.dropout(conv1,self.dropoutPH)
-
-        with tf.name_scope('convolutional_layer_2'):
-            wc2 = tf.Variable(tf.random_normal([self.k_conv, self.k_conv, self.n_conv1, self.n_conv2])) # kxk conv, 2 input, n_conv outputs
-            bc2 = tf.Variable(tf.random_normal([self.n_conv2]))
-            conv2 = conv2d(conv1,wc2,bc2,name="conv2" )
-            # Apply Dropout
-            conv2 = tf.nn.dropout(conv2, self.dropoutPH)
-
-        with tf.name_scope('dense_layer'):
-            if self.n_steps is None:
-                wd = tf.Variable(tf.random_normal([self.n_dense, self.n_out])) # fully connected, image inputs, n_out outputs
-                bd = tf.Variable(tf.random_normal([self.n_out]))
-                dense = tf.reshape(conv2, [-1, self.n_dense]) # Reshape conv2 output to fit dense layer input
-                logits = tf.add(tf.matmul(dense,wd),bd)#logits
-                self.qhat = tf.nn.softmax(logits,name="qhat")
-            else:
-                dense = tf.reshape(conv2, [-1, self.n_dense]) # Reshape conv1 output to fit dense layer input
-                wd = tf.Variable(tf.truncated_normal([self.n_dense, self.n_lstm], stddev=0.1))
-                bd = tf.Variable(tf.constant(0.1, shape=[self.n_lstm]))
-                dense_out = tf.nn.softmax(tf.matmul(dense, wd) + bd,name="dense_out")
-                dense_out = tf.nn.dropout(dense_out, self.dropoutPH)
-
         with tf.name_scope('rnn_layer'):
             if self.n_steps is not None:
                 #now predict sequence of firing

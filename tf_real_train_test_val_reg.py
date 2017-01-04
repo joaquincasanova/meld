@@ -15,22 +15,23 @@ import nn_prepro
 
 #meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size=nn_prepro.aud_dataset(pca=True, subsample=10)
 
-meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size=nn_prepro.faces_dataset(pca=True, subsample=10)
+subject_id=7
+
+meas_dims, m, p, n_steps, total_batch_size = nn_prepro.faces_dataset(subject_id)
 
 fieldnames=['cost','cost_step','batches','learning rate','batch_size','per_batch','dropout','beta','k_conv','n_conv1','n_conv2','n_layer','n_lstm','n_steps','train step','xentropy','rmse','accuracy','xentropy_last','rmse_last','accuracy_last']
-
-with open('./nn_real_subsample_faces.csv','w') as csvfile:
+subsample = 1
+with open('./nn_real_no_subsample_faces.csv','w') as csvfile:
     writer=csv.DictWriter(csvfile,fieldnames=fieldnames)
     writer.writeheader()
     for cost in ['cross']:
         for cost_step in ['last']:
             for learning_rate in [0.005]:
-                for batches in [5]:
+                for batches in [10]:
                     for dropout in [1.0]:
                         for beta in [0.]:
                             for per_batch in [500]:
                                 for batch_size in [100]:
-                                    total_batch_size-batches*batch_size
                                     test_size = 24
                                     val_size = 25
                                     print test_size, val_size, batch_size, total_batch_size
@@ -45,22 +46,18 @@ with open('./nn_real_subsample_faces.csv','w') as csvfile:
                                                     n_dense=int((meas_dims[0]-k_conv+1)/k_pool-k_conv+1)*int((meas_dims[1]-k_conv+1)/k_pool-k_conv+1)*n_conv2
                                                     for n_lstm in [10,100,300]:
                                                         val_step=100
-
+                                                        meas_img_test, qtrue_test, meas_dims, m, p, n_steps, test_size = nn_prepro.faces_dataset(subject_id,selection=range(0,test_size),pca=True,subsample=subsample,justdims=False)
                                                         #pick a test batch
-                                                        meas_img_test = meas_img_all[0:test_size,:,:,:,:]
-                                                        qtrue_test = qtrue_all[0:test_size,:,:]
                                                         print "Test batch"
                                                         print 0, test_size
                                                         #pick a val batch
-                                                        meas_img_val = meas_img_all[(test_size):(test_size+val_size),:,:,:,:]
-                                                        qtrue_val = qtrue_all[(test_size):(test_size+val_size),:,:]
+                                                        meas_img_val, qtrue_val, meas_dims, m, p, n_steps, test_size = nn_prepro.faces_dataset(subject_id,selection=range((test_size),(test_size+val_size)),pca=True,subsample=subsample,justdims=False)
                                                         print "Val batch"
                                                         print test_size, test_size+val_size
                                                         #pick a first batch of batch_size
                                                         batch_num=0
                                                         choose = np.random.choice(total_batch_size-test_size-val_size,batch_size,replace=False)
-                                                        meas_img = meas_img_all[(test_size+val_size+choose),:,:,:,:]
-                                                        qtrue = qtrue_all[(test_size+val_size+choose),:,:]
+                                                        meas_img, qtrue, meas_dims, m, p, n_steps, batch_size = nn_prepro.faces_dataset(subject_id,selection=(test_size+val_size+choose),pca=True,subsample=subsample,justdims=False)
                                                         batch_num = 0
                                                         print "New batch", batch_num
                                                         print choose
@@ -96,8 +93,7 @@ with open('./nn_real_subsample_faces.csv','w') as csvfile:
                                                                     print "New batch", batch_num
 
                                                                     choose = np.random.choice(total_batch_size-test_size-val_size,batch_size,replace=False)
-                                                                    meas_img = meas_img_all[(test_size+val_size+choose),:,:,:,:]
-                                                                    qtrue = qtrue_all[(test_size+val_size+choose),:,:]
+                                                                    meas_img, qtrue, meas_dims, m, p, n_steps, batch_size = nn_prepro.faces_dataset(subject_id,selection=(test_size+val_size+choose),pca=True,subsample=subsample,justdims=False)
                                                                     print choose
                                                                     
                                                                     step=0
