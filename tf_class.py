@@ -15,7 +15,7 @@ def max_pool(img, k):
                           padding='VALID')
 
 class tf_meld:
-    def __init__(self,learning_rate,meas_dims,k_conv,k_pool,n_chan_in,n_conv1,n_conv2,n_out,n_steps=None,n_lstm=None,n_layer=None,cost_func='cross',cost_time='all', beta=0.0, cnn='True'):
+    def __init__(self,learning_rate,meas_dims,k_conv,k_pool,n_chan_in,n_conv1,n_conv2,n_out,n_steps=None,n_lstm=None,n_layer=None,cost_func='cross',cost_time='all', beta=0.0, cnn=True):
         self.learning_rate=learning_rate
         print "learning rate: ", self.learning_rate
         self.meas_dims=meas_dims
@@ -152,17 +152,16 @@ class tf_meld:
                 self.qhat = tf.nn.softmax(logits,name="qhat")
                 
         with tf.name_scope('cost'):
-            reg=tf.multiply(self.betaPH,
-                           tf.add(tf.add(tf.nn.l2_loss(wd),tf.nn.l2_loss(wc1)),
-                                  tf.nn.l2_loss(wc2)))
-
+            if cnn is True:
+                reg=tf.multiply(self.betaPH,
+                                tf.add(tf.add(tf.nn.l2_loss(wd),tf.nn.l2_loss(wc1)),
+                                       tf.nn.l2_loss(wc2)))
+            else:
+                reg=tf.multiply(self.betaPH,tf.nn.l2_loss(wd))
+                
             A=tf.argmax(logits,1)
             if self.n_steps is None:
-                wd = tf.Variable(tf.truncated_normal([self.n_dense, self.n_lstm], stddev=0.1))
-                bd = tf.Variable(tf.constant(0.1, shape=[self.n_lstm]))
-                dense_out = tf.nn.softmax(tf.matmul(dense, wd) + bd,name="dense_out")
-                dense_out = tf.nn.dropout(dense_out, self.dropoutPH)
-
+                
                 B=tf.argmax(self.qtruePH,1)
                 qtrue_OH = tf.one_hot(B,self.n_out,on_value=1,off_value=0,axis=-1)#need one-hot for CE calculation
                 self.cross = tf.add(tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits, self.qtruePH_OH),name="cross"),reg)
