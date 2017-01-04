@@ -49,7 +49,7 @@ class tf_meld:
         print "beta: ", self.beta
         self.cnn=cnn
         print self.cnn
-        if cnn is True:
+        if self.cnn is True:
             self.n_dense=int((self.meas_dims[0]-self.k_conv+1)/self.k_pool-self.k_conv+1)*int((self.meas_dims[1]-self.k_conv+1)/self.k_pool-self.k_conv+1)*self.n_conv2
         else:
             self.n_dense=self.meas_dims
@@ -152,7 +152,7 @@ class tf_meld:
                 self.qhat = tf.nn.softmax(logits,name="qhat")
                 
         with tf.name_scope('cost'):
-            if cnn is True:
+            if self.cnn is True:
                 reg=tf.multiply(self.betaPH,
                                 tf.add(tf.add(tf.nn.l2_loss(wd),tf.nn.l2_loss(wc1)),
                                        tf.nn.l2_loss(wc2)))

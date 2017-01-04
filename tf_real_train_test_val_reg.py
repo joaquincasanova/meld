@@ -21,7 +21,8 @@ meas_dims, m, p, n_steps, total_batch_size = nn_prepro.faces_dataset(subject_id)
 
 fieldnames=['cost','cost_step','batches','learning rate','batch_size','per_batch','dropout','beta','k_conv','n_conv1','n_conv2','n_layer','n_lstm','n_steps','train step','xentropy','rmse','accuracy','xentropy_last','rmse_last','accuracy_last']
 subsample = 1
-with open('./nn_real_no_subsample_faces.csv','w') as csvfile:
+fname = './nn_real_no_subsample_faces_%s.csv' % subject_id
+with open(fname,'w') as csvfile:
     writer=csv.DictWriter(csvfile,fieldnames=fieldnames)
     writer.writeheader()
     for cost in ['cross']:
