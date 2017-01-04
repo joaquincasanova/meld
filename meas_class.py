@@ -108,9 +108,8 @@ class meas:
     def stack_reshape(self):
         self.meas_stack=np.vstack((self.meas_in[0],self.meas_in[1]))#[m0+m1]xbatch_size*n_steps
         self.m=self.m0+self.m1
-        self.meas_stack=self.meas_stack.reshape([(self.m,self.batch_size,self.n_steps)])#[m0+m1]xbatch_sizexn_steps
+        self.meas_stack=self.meas_stack.reshape((self.m,self.batch_size,self.n_steps))#[m0+m1]xbatch_sizexn_steps
         self.meas_stack=self.meas_stack.transpose((1,2,0))#batch_sizexn_stepsx[m0+m1]
-
 
     def interp(self):
         self.grid_xyz()

@@ -86,7 +86,7 @@ def aud_dataset(selection='all',pca=False,subsample=1,justdims=True,cnn=True):
         meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size = prepro(stc, epochs, epochs_eeg,epochs_meg,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn)
         return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size 
 
-def faces_dataset(subject_id,selection='all',pca=False,subsample=1,justdims=True):
+def faces_dataset(subject_id,selection='all',pca=False,subsample=1,justdims=True,cnn=True):
     study_path = '/home/jcasa/mne_data/openfmri'
     subjects_dir = os.path.join(study_path, 'subjects')
     meg_dir = os.path.join(study_path, 'MEG')

@@ -32,8 +32,6 @@ class tf_meld:
         print "n_conv2: ", self.n_conv2
         self.n_out=n_out
         print "n_out: ", self.n_out 
-        self.n_dense=int((self.meas_dims[0]-self.k_conv+1)/self.k_pool-self.k_conv+1)*int((self.meas_dims[1]-self.k_conv+1)/self.k_pool-self.k_conv+1)*self.n_conv2
-        print "n_dense: ", self.n_dense
         if n_steps is 1:
             self.n_steps=None
         else:
@@ -51,6 +49,11 @@ class tf_meld:
         print "beta: ", self.beta
         self.cnn=cnn
         print self.cnn
+        if cnn is True:
+            self.n_dense=int((self.meas_dims[0]-self.k_conv+1)/self.k_pool-self.k_conv+1)*int((self.meas_dims[1]-self.k_conv+1)/self.k_pool-self.k_conv+1)*self.n_conv2
+        else:
+            self.n_dense=self.meas_dims
+        print "n_dense: ", self.n_dense
     def network(self):
         
         self.dropoutPH = tf.placeholder(tf.float32, name="dropout")
