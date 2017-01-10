@@ -9,7 +9,7 @@ import time
 fieldnames=['cost','cost_step','batches','learning rate','batch_size','per_batch','dropout','beta','k_conv','n_conv1','n_conv2','n_layer','n_lstm','n_steps','train step','xentropy','rmse','accuracy','xentropy_last','rmse_last','accuracy_last']
 
 data=np.zeros([1,7])
-csvfile = open('./nn_real_rnn_pca.csv','r')
+csvfile = open('./nn_real_no_subsample_no_cnn_faces_7.csv','r')
 try:
     reader=csv.reader(csvfile)
     rownum=0
@@ -79,12 +79,20 @@ for e in err_col_vals:
             
     data_slice_xp=np.arange(0,data_slice_x.shape[1]).reshape([1,-1])
     data_slice_y=data[picks,e].reshape([1,-1])
+    test = np.where(data[:,col_step]<=-2)
+    test_acc_last=data[test,5]
+    val = np.where(data[:,col_step]==-1)
+    val_acc_last=np.mean(data[val,5])
+    lab='val accuracy='+str(val_acc_last)
+
     plt.plot(data_slice_xp.T, data_slice_y.T,col)
             
     plt.xlim(0,500*5.)
     plt.ylabel(err_col_lab[edx-1])
     if edx==4:
         plt.xlabel('Step')
+    if edx==5:
+        plt.xlabel(lab)
                 
 plt.show()
 

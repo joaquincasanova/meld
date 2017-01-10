@@ -12,7 +12,7 @@ from mne.datasets import sample
 from mne.minimum_norm import (make_inverse_operator, apply_inverse,
                               write_inverse_operator, apply_inverse_epochs,
                               read_inverse_operator)
-def aud_dataset(selection='all',pca=False,subsample=1,justdims=True,cnn=True):
+def aud_dataset(selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=False):
     ###############################################################################
     # Setup for reading the raw data
     data_path = sample.data_path()
@@ -20,7 +20,7 @@ def aud_dataset(selection='all',pca=False,subsample=1,justdims=True,cnn=True):
     event_fname = data_path + '/MEG/sample/sample_audvis_filt-0-40_raw-eve.fif'
     tmin = -0.2  # start of each epoch (200ms before the trigger)
     tmax = 0.5  # end of each epoch (500ms after the trigger)
-
+    subject='sample'
     raw = mne.io.read_raw_fif(raw_fname, add_eeg_ref=False, preload=True)
 
     raw.set_eeg_reference()  # set EEG average reference
@@ -80,13 +80,13 @@ def aud_dataset(selection='all',pca=False,subsample=1,justdims=True,cnn=True):
     #stc.save('sample_audvis-source-epochs')
  
     if justdims is True:
-        meas_dims, m, p, n_steps, total_batch_size = prepro(stc, epochs, epochs_eeg,epochs_meg,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn)
+        meas_dims, m, p, n_steps, total_batch_size = prepro(stc, epochs, epochs_eeg,epochs_meg,subject,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate)
         return meas_dims, m, p, n_steps, total_batch_size
     else:
-        meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size = prepro(stc, epochs, epochs_eeg,epochs_meg,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn)
+        meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size = prepro(stc, epochs, epochs_eeg,epochs_meg,subject,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate)
         return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size 
 
-def faces_dataset(subject_id,selection='all',pca=False,subsample=1,justdims=True,cnn=True):
+def faces_dataset(subject_id,selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=False):
     study_path = '/home/jcasa/mne_data/openfmri'
     subjects_dir = os.path.join(study_path, 'subjects')
     meg_dir = os.path.join(study_path, 'MEG')
@@ -115,16 +115,15 @@ def faces_dataset(subject_id,selection='all',pca=False,subsample=1,justdims=True
     lambda2 = 1. / snr ** 2
     stc = apply_inverse_epochs(epochs, inv, lambda2,
                         method=method, pick_ori=None)
-    
     if justdims is True:
-        meas_dims, m, p, n_steps, total_batch_size = prepro(stc, epochs, epochs_eeg,epochs_meg,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn)
+        meas_dims, m, p, n_steps, total_batch_size = prepro(stc, epochs, epochs_eeg,epochs_meg,subject,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate)
         return meas_dims, m, p, n_steps, total_batch_size
     else:
-        meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size = prepro(stc, epochs, epochs_eeg,epochs_meg,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn)
+        meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size = prepro(stc, epochs, epochs_eeg,epochs_meg,subject,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate)
         return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size 
 
 
-def prepro(stc, epochs, epochs_eeg,epochs_meg,selection='all',pca=False,subsample=1,justdims=True,cnn=True):
+def prepro(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=False):
     if cnn is True:
         if justdims is True:
             total_batch_size = len(stc)#number of events. we'll consider each event an example.
@@ -173,11 +172,14 @@ def prepro(stc, epochs, epochs_eeg,epochs_meg,selection='all',pca=False,subsampl
             if selection is 'all':
                 dipole=np.array([stc[i]._data for i in range(0,len(stc))]).transpose((1,2,0))
             else:
-                dipole=np.array([stc[i]._data for i in selection]).transpose((1,2,0))
-
-            #pxn_stepsxbatchsize
-            qtrue_all,p=meas_class.scale_dipole(dipole,subsample=subsample)
-            #bxnxp
+                dipole=np.array([stc[i]._data for i in selection]).transpose((1,2,0)) 
+            
+            if locate==True:
+                qtrue_all, p = location(stc,subject,selection=selection)
+            else:
+                #pxn_stepsxbatchsize
+                qtrue_all,p=meas_class.scale_dipole(dipole,subsample=subsample)    
+                #bxnxp
             del stc, epochs, epochs_eeg, epochs_meg
             return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size 
     else:
@@ -228,8 +230,49 @@ def prepro(stc, epochs, epochs_eeg,epochs_meg,selection='all',pca=False,subsampl
             else:
                 dipole=np.array([stc[i]._data for i in selection]).transpose((1,2,0))
 
-            #pxn_stepsxbatchsize
-            qtrue_all,p=meas_class.scale_dipole(dipole,subsample=subsample)
-            #bxnxp
+            if locate==True:
+                qtrue_all, p = location(stc,subject,selection=selection)
+            else:
+                #pxn_stepsxbatchsize
+                qtrue_all,p=meas_class.scale_dipole(dipole,subsample=subsample)    
+                #bxnxp
             del stc, epochs, epochs_eeg, epochs_meg
             return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size 
+
+def location(stc,subject,selection='all'):
+    if selection is 'all':
+        nd=stc[0].data.shape[0]
+        ns=stc[0].data.shape[1]
+        loc=np.zeros((len(stc),ns,3))
+        vtx = stc[0].vertices
+        hem0 = np.size(vtx[0])
+        hem1 = np.size(vtx[1])
+        for s in range(0,len(stc)):
+            #max location (index)
+            mxloc = np.argmax(stc[s].data,axis=0)#1xn_steps
+            #what hemisphere?
+            hemi = np.where(mxloc<nd/2,0,1)
+            for m in range(0,ns):
+                mxvtx = vtx[hemi[m]][mxloc[m]-hemi[m]*hem0]#1xn_steps
+                loc[s,m ,:] = mne.vertex_to_mni(mxvtx,hemi[m],subject,verbose=False)
+        qtrue_all = loc
+        p=3
+        return qtrue_all, p
+    else:
+        nd=stc[0].data.shape[0]
+        ns=stc[0].data.shape[1]
+        loc=np.zeros((len(selection),ns,3))
+        vtx = stc[0].vertices
+        hem0 = np.size(vtx[0])
+        hem1 = np.size(vtx[1])
+        for s in range(0,len(selection)):
+            #max location (index)
+            mxloc = np.argmax(stc[selection[s]].data,axis=0)#1xn_steps
+            #what hemisphere?
+            hemi = np.where(mxloc<nd/2,0,1)
+            for m in range(0,ns):
+                mxvtx = vtx[hemi[m]][mxloc[m]-hemi[m]*hem0]#1xn_steps
+                loc[s,m ,:] = mne.vertex_to_mni(mxvtx,hemi[m],subject,verbose=False)
+        qtrue_all = loc
+        p=3
+        return qtrue_all, p

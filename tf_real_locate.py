@@ -21,11 +21,11 @@ meas_dims, m, p, n_steps, total_batch_size = nn_prepro.faces_dataset(subject_id)
 
 fieldnames=['cost','cost_step','batches','learning rate','batch_size','per_batch','dropout','beta','k_conv','n_conv1','n_conv2','n_layer','n_lstm','n_steps','train step','xentropy','rmse','accuracy','xentropy_last','rmse_last','accuracy_last']
 subsample = 1
-fname = './nn_real_no_subsample_no_cnn_faces_%s.csv' % subject_id
+fname = './nn_real_locate_faces_%s.csv' % subject_id
 with open(fname,'w') as csvfile:
     writer=csv.DictWriter(csvfile,fieldnames=fieldnames)
     writer.writeheader()
-    for cost in ['cross']:
+    for cost in ['rmse']:
         for cost_step in ['last']:
             for learning_rate in [0.005]:
                 for batches in [10]:
@@ -47,22 +47,22 @@ with open(fname,'w') as csvfile:
                                                     n_dense=int((meas_dims[0]-k_conv+1)/k_pool-k_conv+1)*int((meas_dims[1]-k_conv+1)/k_pool-k_conv+1)*n_conv2
                                                     for n_lstm in [100]:
                                                         val_step=100
-                                                        meas_img_test, qtrue_test, meas_dims, m, p, n_steps, test_size = nn_prepro.faces_dataset(subject_id,selection=range(0,test_size),pca=True,subsample=subsample,justdims=False,cnn=False)
+                                                        meas_img_test, qtrue_test, meas_dims, m, p, n_steps, test_size = nn_prepro.faces_dataset(subject_id,selection=range(0,test_size),pca=True,subsample=subsample,justdims=False,cnn=True,locate=True)
                                                         #pick a test batch
                                                         print "Test batch"
                                                         print 0, test_size
                                                         #pick a val batch
-                                                        meas_img_val, qtrue_val, meas_dims, m, p, n_steps, test_size = nn_prepro.faces_dataset(subject_id,selection=range((test_size),(test_size+val_size)),pca=True,subsample=subsample,justdims=False,cnn=False)
+                                                        meas_img_val, qtrue_val, meas_dims, m, p, n_steps, test_size = nn_prepro.faces_dataset(subject_id,selection=range((test_size),(test_size+val_size)),pca=True,subsample=subsample,justdims=False,cnn=True,locate=True)
                                                         print "Val batch"
                                                         print test_size, test_size+val_size
                                                         #pick a first batch of batch_size
                                                         batch_num=0
                                                         choose = np.random.choice(total_batch_size-test_size-val_size,batch_size,replace=False)
-                                                        meas_img, qtrue, meas_dims, m, p, n_steps, batch_size = nn_prepro.faces_dataset(subject_id,selection=(test_size+val_size+choose),pca=True,subsample=subsample,justdims=False,cnn=False)
+                                                        meas_img, qtrue, meas_dims, m, p, n_steps, batch_size = nn_prepro.faces_dataset(subject_id,selection=(test_size+val_size+choose),pca=True,subsample=subsample,justdims=False,cnn=True,locate=True)
                                                         batch_num = 0
                                                         print "New batch", batch_num
                                                         print choose
-                                                        cnn_rnn=tf_class.tf_meld(learning_rate,meas_dims,k_conv,k_pool,n_chan_in,n_conv1,n_conv2,n_out,n_steps,n_lstm,n_layer,cost_func=cost,cost_time=cost_step,beta=beta,cnn=False)
+                                                        cnn_rnn=tf_class.tf_meld(learning_rate,meas_dims,k_conv,k_pool,n_chan_in,n_conv1,n_conv2,n_out,n_steps,n_lstm,n_layer,cost_func=cost,cost_time=cost_step,beta=beta,cnn=True)
                                                         tf.reset_default_graph()
                                                         cnn_rnn.network()
                                                         with tf.Session() as session:
@@ -94,7 +94,7 @@ with open(fname,'w') as csvfile:
                                                                     print "New batch", batch_num
 
                                                                     choose = np.random.choice(total_batch_size-test_size-val_size,batch_size,replace=False)
-                                                                    meas_img, qtrue, meas_dims, m, p, n_steps, batch_size = nn_prepro.faces_dataset(subject_id,selection=(test_size+val_size+choose),pca=True,subsample=subsample,justdims=False,cnn=False)
+                                                                    meas_img, qtrue, meas_dims, m, p, n_steps, batch_size = nn_prepro.faces_dataset(subject_id,selection=(test_size+val_size+choose),pca=True,subsample=subsample,justdims=False,cnn=True,locate=True)
                                                                     print choose
                                                                     
                                                                     step=0

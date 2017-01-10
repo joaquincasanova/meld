@@ -104,7 +104,7 @@ class tf_meld:
                     bd = tf.Variable(tf.constant(0.1, shape=[self.n_lstm]))
                     dense_out = tf.nn.softmax(tf.matmul(dense, wd) + bd,name="dense_out")
                     dense_out = tf.nn.dropout(dense_out, self.dropoutPH)
-        else:
+        else:#NO CNN
             if  self.n_steps is None:
                 self.measPH=tf.placeholder(tf.float32,shape=(None,self.meas_dims), name="meas")
                 self.qtruePH=tf.placeholder(tf.float32,shape=(None, self.n_out), name="qtrue")

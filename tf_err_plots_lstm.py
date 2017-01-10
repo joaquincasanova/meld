@@ -9,7 +9,7 @@ import time
 fieldnames=['cost','cost_step','batches','learning rate','batch_size','per_batch','dropout','beta','k_conv','n_conv1','n_conv2','n_layer','n_lstm','n_steps','train step','xentropy','rmse','accuracy','xentropy_last','rmse_last','accuracy_last']
 
 data=np.zeros([1,9])
-csvfile = open('./nn_real_no_subsample.csv','r')
+csvfile = open('./nn_real_no_subsample_faces_7.csv','r')
 try:
     reader=csv.reader(csvfile)
     rownum=0
