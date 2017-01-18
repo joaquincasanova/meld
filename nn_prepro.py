@@ -127,11 +127,16 @@ def prepro(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=False,
     if cnn is True:
         if justdims is True:
             total_batch_size = len(stc)#number of events. we'll consider each event an example.
-            p = stc[0]._data.shape[0]
+            if locate is True:
+                p=3
+            else:
+                p = stc[0]._data.shape[0]
             n_steps = stc[0]._data.shape[1]
             meas_dims=[11,11]
             m = meas_dims[0]*meas_dims[1]
             del stc, epochs, epochs_eeg, epochs_meg
+            if locate is True:
+                p=3
             return meas_dims, m, p, n_steps, total_batch_size
         else:
             if selection is 'all':
@@ -185,7 +190,10 @@ def prepro(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=False,
     else:
         if justdims is True:
             total_batch_size = len(stc)#number of events. we'll consider each event an example.
-            p = stc[0]._data.shape[0]
+            if locate is True:
+                p=3
+            else:
+                p = stc[0]._data.shape[0]
             n_steps = stc[0]._data.shape[1]
             meas_dims=epochs.get_data().shape[1]
             m = meas_dims
@@ -245,6 +253,7 @@ def location(stc,subject,selection='all'):
         ns=stc[0].data.shape[1]
         loc=np.zeros((len(stc),ns,3))
         vtx = stc[0].vertices
+        vtx_long = np.hstack((stc[0].vertices[0],stc[0].vertices[1]))
         hem0 = np.size(vtx[0])
         hem1 = np.size(vtx[1])
         for s in range(0,len(stc)):
@@ -252,9 +261,11 @@ def location(stc,subject,selection='all'):
             mxloc = np.argmax(stc[s].data,axis=0)#1xn_steps
             #what hemisphere?
             hemi = np.where(mxloc<nd/2,0,1)
-            for m in range(0,ns):
-                mxvtx = vtx[hemi[m]][mxloc[m]-hemi[m]*hem0]#1xn_steps
-                loc[s,m ,:] = mne.vertex_to_mni(mxvtx,hemi[m],subject,verbose=False)
+            mxvtx_long =vtx_long[mxloc]
+            
+            #for m in range(0,ns):
+            #    mxvtx = vtx[hemi[m]][mxloc[m]-hemi[m]*hem0]#1xn_steps
+            loc[s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,verbose=False)
         qtrue_all = loc
         p=3
         return qtrue_all, p
@@ -263,16 +274,19 @@ def location(stc,subject,selection='all'):
         ns=stc[0].data.shape[1]
         loc=np.zeros((len(selection),ns,3))
         vtx = stc[0].vertices
+        vtx_long = np.hstack((stc[0].vertices[0],stc[0].vertices[1]))
         hem0 = np.size(vtx[0])
         hem1 = np.size(vtx[1])
         for s in range(0,len(selection)):
             #max location (index)
-            mxloc = np.argmax(stc[selection[s]].data,axis=0)#1xn_steps
+            mxloc = np.argmax(stc[s].data,axis=0)#1xn_steps
             #what hemisphere?
             hemi = np.where(mxloc<nd/2,0,1)
-            for m in range(0,ns):
-                mxvtx = vtx[hemi[m]][mxloc[m]-hemi[m]*hem0]#1xn_steps
-                loc[s,m ,:] = mne.vertex_to_mni(mxvtx,hemi[m],subject,verbose=False)
+            mxvtx_long =vtx_long[mxloc]
+            
+            #for m in range(0,ns):
+            #    mxvtx = vtx[hemi[m]][mxloc[m]-hemi[m]*hem0]#1xn_steps
+            loc[s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,verbose=False)
         qtrue_all = loc
         p=3
         return qtrue_all, p

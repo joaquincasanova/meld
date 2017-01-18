@@ -9,13 +9,13 @@ import time
 fieldnames=['cost','cost_step','batches','learning rate','batch_size','per_batch','dropout','beta','k_conv','n_conv1','n_conv2','n_layer','n_lstm','n_steps','train step','xentropy','rmse','accuracy','xentropy_last','rmse_last','accuracy_last']
 
 data=np.zeros([1,9])
-csvfile = open('./nn_real_no_subsample_faces_7.csv','r')
+csvfile = open('./nn_real_locate_faces_7.csv','r')
 try:
     reader=csv.reader(csvfile)
     rownum=0
     for row in reader:
-        print row
-        print len(row)
+        #print row
+        #print len(row)
         #time.sleep(1)
         if rownum==0:
             header=row
@@ -61,12 +61,12 @@ col_rmse_last=6
 col_acc_last=7       
 col_ce_last=8   
 
-lstm_vals=[10,100,300]
+lstm_vals=[10,30,100]
 layer_vals=[1,2]
 
-err_col_vals=[3,4,5,6,7,8]
+err_col_vals=[3,5]#[3,4,5,6,7,8]
 
-err_col_lab=['RMSE','Accuracy','Cross Entropy','RMSE Last','Accuracy Last','Cross Entropy Last']
+err_col_lab=['RMSE','RMSE Last']#['RMSE','Accuracy','Cross Entropy','RMSE Last','Accuracy Last','Cross Entropy Last']
 
 data=np.delete(data,(0),axis=0)
 colors=('b', 'g', 'r', 'k', 'y', 'c')
@@ -78,22 +78,24 @@ for ls in lstm_vals:
         for e in err_col_vals:
             edx+=1 
 
-            plt.subplot(3, 3, edx)
+            plt.subplot(3, 1, edx)
         
             col=colors[idx-1]
             lab='n_lstm='+str(ls)+', n_layers='+str(la)
+            print lab
             picks = np.where(data[:,col_n_lstm]==ls)
             picks = np.intersect1d(picks, np.where(data[:,col_n_layer]==la))
             picks = np.intersect1d(picks, np.where(data[:,col_step]>=0))
             test = np.where(data[:,col_n_lstm]==ls)
             test = np.intersect1d(test, np.where(data[:,col_n_layer]==la))
             test = np.intersect1d(test, np.where(data[:,col_step]<=-2))
-            test_acc_last=data[test,7]
+            test_acc_last=np.mean(data[test,5])
             val= np.where(data[:,col_n_lstm]==ls)
             val = np.intersect1d(val, np.where(data[:,col_n_layer]==la))
             val = np.intersect1d(val, np.where(data[:,col_step]==-1))
-            val_acc_last=np.mean(data[val,7])
-            lab='n_lstm='+str(ls)+', n_layers='+str(la)+', val accuracy='+str(val_acc_last)
+            print data[val,5]
+            val_acc_last=np.mean(data[val,5])
+            lab='n_lstm='+str(ls)+', n_layers='+str(la)+', val rmse='+str(val_acc_last)+', test rmse='+str(test_acc_last)
              
             #print len(picks)
             #time.sleep(1)
@@ -103,12 +105,12 @@ for ls in lstm_vals:
             data_slice_y=data[picks,e].reshape([1,-1])
             plt.plot(data_slice_xp.T, data_slice_y.T,col,label=lab)
             
-            plt.xlim(0,500*5.)
+            plt.xlim(0,500*20.)
             plt.ylabel(err_col_lab[edx-1])
-            if edx==4:
+            if edx==2:
                 plt.xlabel('Step')
                 
-            if edx==5:
+            if edx==2:
                 legend = plt.legend(loc=(0,-1.),labelspacing=0)
 plt.show()
 

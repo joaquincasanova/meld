@@ -58,7 +58,11 @@ class tf_meld:
         
         self.dropoutPH = tf.placeholder(tf.float32, name="dropout")
         self.betaPH =  tf.placeholder(tf.float32, name="beta")
-
+        if self.n_out==3:
+            std=10.
+        else:
+            std=0.1
+            
         if self.cnn is True:
             if  self.n_steps is None:
                 self.measPH=tf.placeholder(tf.float32,shape=(None,self.meas_dims[0],self.meas_dims[1],self.n_chan_in), name="meas")
@@ -93,11 +97,11 @@ class tf_meld:
 
             with tf.name_scope('dense_layer'):
                 if self.n_steps is None:
-                    wd = tf.Variable(tf.random_normal([self.n_dense, self.n_out])) # fully connected, image inputs, n_out outputs
-                    bd = tf.Variable(tf.random_normal([self.n_out]))
+                    wd = tf.Variable(tf.random_normal([self.n_dense, self.n_out]),stddev=std) # fully connected, image inputs, n_out outputs
+                    bd = tf.Variable(tf.random_normal([self.n_out]),stddev=std)
                     dense = tf.reshape(conv2, [-1, self.n_dense]) # Reshape conv2 output to fit dense layer input
                     logits = tf.add(tf.matmul(dense,wd),bd)#logits
-                    self.qhat = tf.nn.softmax(logits,name="qhat")
+
                 else:
                     dense = tf.reshape(conv2, [-1, self.n_dense]) # Reshape conv1 output to fit dense layer input
                     wd = tf.Variable(tf.truncated_normal([self.n_dense, self.n_lstm], stddev=0.1))
@@ -114,10 +118,9 @@ class tf_meld:
 
             with tf.name_scope('dense_layer'):
                 if self.n_steps is None:
-                    wd = tf.Variable(tf.random_normal([self.meas_dims, self.n_out])) # fully connected, image inputs, n_out outputs
-                    bd = tf.Variable(tf.random_normal([self.n_out]))
+                    wd = tf.Variable(tf.random_normal([self.meas_dims, self.n_out]),stddev=std) # fully connected, image inputs, n_out outputs
+                    bd = tf.Variable(tf.random_normal([self.n_out]),stddev=std)
                     logits = tf.add(tf.matmul(self.measPH,wd),bd)#logits
-                    self.qhat = tf.nn.softmax(logits,name="qhat")
                 else:
                     dense = tf.reshape(self.measPH, [-1, self.meas_dims]) # Reshape input to fit dense layer input
                     wd = tf.Variable(tf.truncated_normal([self.n_dense, self.n_lstm], stddev=0.1))
@@ -140,18 +143,28 @@ class tf_meld:
                 
                 outs = tf.reshape(output, [-1, self.n_lstm])#n*bxn_lstm
                 
-                wrnn = tf.Variable(tf.truncated_normal([self.n_lstm,self.n_out], stddev=0.1))
-                brnn = tf.Variable(tf.constant(0.1, shape=[self.n_out]))
+                wrnn = tf.Variable(tf.random_normal([self.n_lstm,self.n_out], stddev=std))
+                brnn = tf.Variable(tf.random_normal([self.n_out],stddev=std))
 
                 logits = tf.add(tf.matmul(outs,wrnn),brnn)#logits - b*nxp
                 #logits = tf.reshape(logits,[-1,self.n_out])#b*nxp
                 
                 logits_last=tf.add(tf.matmul(last,wrnn),brnn)#logits - bxp
 
-                qhat_last = tf.nn.softmax(logits_last,name="qhat_last")
-                self.qhat = tf.nn.softmax(logits,name="qhat")
-                
         with tf.name_scope('cost'):
+            if self.n_steps is not None:
+                if self.n_out==3:
+                    self.qhat = logits
+                    qhat_last = logits_last                
+                else:
+                    self.qhat = tf.nn.softmax(logits,name="qhat")
+                    qhat_last = tf.nn.softmax(logits_last,name="qhat_last")
+            else:
+                    if self.n_out==3:
+                        self.qhat = logits
+                    else:
+                        self.qhat = tf.nn.softmax(logits,name="qhat")
+
             if self.cnn is True:
                 reg=tf.multiply(self.betaPH,
                                 tf.add(tf.add(tf.nn.l2_loss(wd),tf.nn.l2_loss(wc1)),
