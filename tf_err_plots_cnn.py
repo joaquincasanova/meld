@@ -61,15 +61,15 @@ col_rmse_last=6
 col_acc_last=7       
 col_ce_last=8   
 
-l1_vals=[2,3]
-l2_vals=[5,7]
+l1_vals=[1,2,3]
+l2_vals=[3,5,7]
 
 err_col_vals=[3,5]#[3,4,5,6,7,8]
 
 err_col_lab=['RMSE','RMSE Last']#['RMSE','Accuracy','Cross Entropy','RMSE Last','Accuracy Last','Cross Entropy Last']
 
 data=np.delete(data,(0),axis=0)
-colors=('b', 'g', 'r', 'k', 'y', 'c')
+colors=('b', 'g', 'r', 'k', 'y', 'c','m','b', 'g', 'r', 'k')
 idx = 0
 for l1 in l1_vals:
     for l2 in l2_vals:

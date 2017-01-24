@@ -91,7 +91,7 @@ def faces_dataset(subject_id,selection='all',pca=False,subsample=1,justdims=True
     subjects_dir = os.path.join(study_path, 'subjects')
     meg_dir = os.path.join(study_path, 'MEG')
     os.environ["SUBJECTS_DIR"] = subjects_dir
-    spacing = 'oct5'
+    spacing = 'ico5'
     mindist = 5
 
     subject = "sub%03d" % subject_id
