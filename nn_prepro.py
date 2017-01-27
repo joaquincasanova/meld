@@ -91,7 +91,7 @@ def faces_dataset(subject_id,selection='all',pca=False,subsample=1,justdims=True
     subjects_dir = os.path.join(study_path, 'subjects')
     meg_dir = os.path.join(study_path, 'MEG')
     os.environ["SUBJECTS_DIR"] = subjects_dir
-    spacing = 'ico5'
+    spacing = 'oct5'
     mindist = 5
 
     subject = "sub%03d" % subject_id
@@ -290,3 +290,24 @@ def location(stc,subject,selection='all'):
         qtrue_all = loc
         p=3
         return qtrue_all, p
+
+def merge_2(s1,s2,selection1='all',selection2='all',selection='all',pca=False,subsample=1,justdims=False,cnn=True,locate=False):
+    subject_id = s1
+    meas_dims, m, p, n_steps, batch_size1 = faces_dataset(subject_id,locate=True)
+    meas_img1, qtrue1, meas_dims, m, p, n_steps, batch_size1 = faces_dataset(subject_id,selection=selection1,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate)
+
+    subject_id = s2
+    meas_dims, m, p, n_steps, batch_size2 = faces_dataset(subject_id,locate=True)
+    meas_img2, qtrue2, meas_dims, m, p, n_steps, batch_size2 = faces_dataset(subject_id,selection=selection2,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate)
+    
+    meas_img = np.vstack([meas_img1,meas_img2])
+    qtrue = np.vstack([qtrue1,qtrue2])
+    tot=meas_img.shape[0]
+    perm=np.random.permutation(tot)
+    meas_img = meas_img[perm,:,:,:,:]
+    qtrue = qtrue[perm,:,:]
+
+    meas_img = meas_img[selection,:,:,:,:]
+    qtrue = qtrue[selection,:,:]
+
+    return meas_img, qtrue, meas_dims, m, p, n_steps, len(selection) 

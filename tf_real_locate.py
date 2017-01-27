@@ -17,14 +17,14 @@ import time
 #meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size=nn_prepro.aud_dataset(pca=True, subsample=10)
 
 
-for subject_id in [7,8]:
+for subject_id in [7]:
     meas_dims, m, p, n_steps, total_batch_size = nn_prepro.faces_dataset(subject_id,locate=True)
     print m, p, n_steps, total_batch_size
     time.sleep(1)
     fieldnames=['cost','cost_step','batches','learning rate','batch_size','per_batch','dropout','beta','k_conv','n_conv1','n_conv2','n_layer','n_lstm','n_steps','train step','xentropy','rmse','accuracy','xentropy_last','rmse_last','accuracy_last']
     subsample = 1
     fname = './nn_real_locate_faces_hyper_%s.csv' % subject_id
-    with open(fname,'a') as csvfile:
+    with open(fname,'w') as csvfile:
         writer=csv.DictWriter(csvfile,fieldnames=fieldnames)
         writer.writeheader()
         for cost in ['rmse']:
@@ -35,8 +35,8 @@ for subject_id in [7,8]:
                             for beta in [0.]:
                                 for per_batch in [500,1000]:
                                     for batch_size in [50,100]:
-                                        test_size = 50
-                                        val_size = 50
+                                        test_size = 25
+                                        val_size = 24
                                         print test_size, val_size, batch_size, total_batch_size
                                         for k_conv in [3]:
                                             for n_conv1 in [2]:
@@ -70,8 +70,6 @@ for subject_id in [7,8]:
                                                             with tf.Session() as session:
 
                                                                 session.run(cnn_rnn.init_step)
-                                                                err_l=100.
-                                                                err_l_prev=70.
                                                                 step=0
                                                                 while step<per_batch and batch_num<batches:
 
@@ -79,7 +77,7 @@ for subject_id in [7,8]:
                                                                                                                          feed_dict={cnn_rnn.qtruePH: qtrue, cnn_rnn.measPH: meas_img, cnn_rnn.dropoutPH: dropout, cnn_rnn.betaPH: beta})
 
                                                                     if step % 10==0:
-                                                                        print "Train Step: ", step, "CE: ",ce, " Accuracy: ", acc, "RMSE: ", err, "CE last: ",ce_l, " Accuracy last: ", acc_l, "RMSE last: ", err_l, "RMSE last prev: ", err_l_prev
+                                                                        print "Train Step: ", step, "CE: ",ce, " Accuracy: ", acc, "RMSE: ", err, "CE last: ",ce_l, " Accuracy last: ", acc_l, "RMSE last: ", err_l
                                                                     writer.writerow({'cost':cost,'cost_step':cost_step,'batches':batches,'learning rate':learning_rate,'batch_size':batch_size,'per_batch':per_batch,'dropout':dropout,'beta':beta,'k_conv':k_conv,'n_conv1':n_conv1,'n_conv2':n_conv2,'n_layer':n_layer,'n_steps':n_steps,'n_lstm':n_lstm,'train step':step,'xentropy':ce,'rmse':err,'accuracy':acc,'xentropy_last':ce_l,'rmse_last':err_l,'accuracy_last':acc_l})
                                                                     if step % val_step==0 and step!=0:
                                                                         guess,cev,accv,errv,ce_lv,acc_lv,err_lv = session.run([cnn_rnn.qhat, cnn_rnn.cross, cnn_rnn.accuracy,cnn_rnn.rmse, cnn_rnn.cross_last, cnn_rnn.accuracy_last,cnn_rnn.rmse_last],
@@ -88,7 +86,7 @@ for subject_id in [7,8]:
 
                                                                         writer.writerow({'cost':cost,'cost_step':cost_step,'batches':batches,'learning rate':learning_rate,'batch_size':batch_size,'per_batch':per_batch,'dropout':dropout,'beta':beta,'k_conv':k_conv,'n_conv1':n_conv1,'n_conv2':n_conv2,'n_layer':n_layer,'n_lstm':n_lstm,'n_steps':n_steps,'train step':-1,'xentropy':cev,'rmse':errv,'accuracy':accv,'xentropy_last':ce_lv,'rmse_last':err_lv,'accuracy_last':acc_lv})
                                                                     step+=1
-                                                                    if (step==(per_batch) and step!=0) or (abs(err_l_prev-err_l)<0.5 and err_l<10.):#
+                                                                    if (step==(per_batch) and step!=0):#
                                                                         batch_num+=1
 
                                                                         #pick a nth batch of batch_size
@@ -99,7 +97,7 @@ for subject_id in [7,8]:
                                                                         print choose
 
                                                                         step=0
-                                                                    err_l_prev=err_l
+                                                                    
                                                                 #test batch
                                                                 guess,cet,acct,errt,ce_lt,acc_lt,err_lt = session.run([cnn_rnn.qhat, cnn_rnn.cross, cnn_rnn.accuracy,cnn_rnn.rmse, cnn_rnn.cross_last, cnn_rnn.accuracy_last,cnn_rnn.rmse_last],
                                                                             feed_dict={cnn_rnn.qtruePH: qtrue_test, cnn_rnn.measPH: meas_img_test, cnn_rnn.dropoutPH: dropout, cnn_rnn.betaPH: beta})
