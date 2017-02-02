@@ -24,8 +24,9 @@ for train_id in [7,8]:
         a = np.arange(0,total_batch_size)
         a_test = np.arange(0,total_batch_size_test)
 
-        test_size = 50
-        val_size = 50
+        test_size = int(.2*total_batch_size_test)
+        val_size = int(.2*.8*total_batch_size)
+        
 
         if train_id==test_id:
             test_size_train = test_size
@@ -41,7 +42,7 @@ for train_id in [7,8]:
             val = np.random.choice(a,val_size,replace=False)
 
         
-        print m, p, n_steps, total_batch_size
+        print "Meas: ", m, " Out: ",p, " Steps: ",n_steps
         time.sleep(1)
         fieldnames=['cost','cost_step','batches','learning rate','batch_size','per_batch','dropout','beta','k_conv','n_conv1','n_conv2','n_layer','n_lstm','n_steps','train step','xentropy','rmse','accuracy','xentropy_last','rmse_last','accuracy_last']
         subsample = 1
@@ -52,23 +53,24 @@ for train_id in [7,8]:
             for cost in ['rmse']:
                 for cost_step in ['last']:
                     for learning_rate in [0.005]:
-                        for batches in [20]:
-                            for dropout in [1.0]:
-                                for beta in [0.]:
-                                    for per_batch in [500]:
-                                        for batch_size in [50,100]:
-                                            print test_size, test_size_train, val_size, batch_size, total_batch_size
+                        for dropout in [1.0]:
+                            for beta in [0.]:
+                                for per_batch in [500]:
+                                    for batch_size in [val_size]:
+                                        print "Test size: ", test_size, " Val_size: ", val_size, " Batch size: ", batch_size, " Total size: ", total_batch_size
+                                        for batches in [int(total_batch_size/batch_size)]:
+                                            print "Batches: ", batches
                                             for k_conv in [3]:
                                                 for n_conv1 in [2]:
                                                     for n_conv2 in [5]:
-                                                        for n_layer in [2,4]:
+                                                        for n_layer in [1,2,3]:
                                                             n_chan_in=2
                                                             k_pool=1
                                                             n_out=p
                                                             n_in=meas_dims[0]*meas_dims[1]*2
                                                             n_dense=int((meas_dims[0]-k_conv+1)/k_pool-k_conv+1)*int((meas_dims[1]-k_conv+1)/k_pool-k_conv+1)*n_conv2
-                                                            for n_lstm in [9,27]:
-                                                                val_step=100
+                                                            for n_lstm in [10,25]:
+                                                                val_step=int(per_batch/5)
                                                                 if test_id==train_id:
                                                                     meas_img_test, qtrue_test, meas_dims, m, p, n_steps, test_size = nn_prepro.faces_dataset(test_id,selection=test,pca=True,subsample=subsample,justdims=False,cnn=True,locate=True)
                                                                     #pick a test batch
@@ -98,7 +100,7 @@ for train_id in [7,8]:
                                                                     #pick a first batch of batch_size
                                                                     batch_num=0
                                                                     meas_img, qtrue, meas_dims, m, p, n_steps, batch_size = nn_prepro.faces_dataset(train_id,selection=batch,pca=True,subsample=subsample,justdims=False,cnn=True,locate=True)
-                                                                
+
                                                                 cnn_rnn=tf_class.tf_meld(learning_rate,meas_dims,k_conv,k_pool,n_chan_in,n_conv1,n_conv2,n_out,n_steps,n_lstm,n_layer,cost_func=cost,cost_time=cost_step,beta=beta,cnn=True)
                                                                 tf.reset_default_graph()
                                                                 cnn_rnn.network()
@@ -127,7 +129,7 @@ for train_id in [7,8]:
                                                                             #pick a nth batch of batch_size
                                                                             batch=np.random.choice(a,batch_size,replace=False,p=prob_select)
                                                                             meas_img, qtrue, meas_dims, m, p, n_steps, batch_size = nn_prepro.faces_dataset(train_id,selection=batch,pca=True,subsample=subsample,justdims=False,cnn=True,locate=True)
-                                                                            
+
                                                                             print "New batch ", batch_num, batch
                                                                             step=0
 

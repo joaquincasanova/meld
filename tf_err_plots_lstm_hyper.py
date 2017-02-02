@@ -7,9 +7,9 @@ from matplotlib.ticker import LinearLocator, FormatStrFormatter
 import matplotlib.pyplot as plt
 import time
 fieldnames=['cost','cost_step','batches','learning rate','batch_size','per_batch','dropout','beta','k_conv','n_conv1','n_conv2','n_layer','n_lstm','n_steps','train step','xentropy','rmse','accuracy','xentropy_last','rmse_last','accuracy_last']
-for train_id in [8,7]:
-    for test_id in [7,8]:
-        fname = './nn_real_locate_faces_cross_%s_%s.csv' % (train_id, test_id)
+for train_id in [7]:
+    for test_id in [7]:
+        fname = './nn_real_locate_faces_cross_fix_tune_%s_%s.csv' % (train_id, test_id)
 
         data=np.zeros([1,11])
         csvfile = open(fname,'r')
@@ -68,10 +68,10 @@ for train_id in [8,7]:
         col_ce_last=10   
 
         lstm_vals=[10,25]
-        layer_vals=[2,3]
+        layer_vals=[1,2,3]
 
-        per_vals=[500,1000]
-        size_vals=[50,100]
+        per_vals=[500]
+        size_vals=[100]
 
         err_col_vals=[5,8]#[3,4,5,6,7,8]
 
@@ -122,7 +122,7 @@ for train_id in [8,7]:
                             data_slice_y=data[picks,e].reshape([1,-1])
                             plt.plot(data_slice_xp.T, data_slice_y.T,linestyle=lin,color=col,label=lab)
 
-                            plt.xlim(0,1000*20.)
+                            plt.xlim(0,500*20.)
                             plt.ylabel(err_col_lab[edx-1])
                             if edx==2:
                                 plt.xlabel('Step')

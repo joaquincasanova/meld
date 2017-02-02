@@ -103,18 +103,18 @@ def faces_dataset(subject_id,selection='all',pca=False,subsample=1,justdims=True
     fwdpath = os.path.join(os.path.join(meg_dir,subject),fwdname) 
     eponame = '%s-epo.fif' % (subject) 
     epopath = os.path.join(os.path.join(meg_dir,subject),eponame)
-    epochs = mne.read_epochs(epopath)
+    epochs = mne.read_epochs(epopath,verbose=False)
 
     epochs_eeg = epochs.copy().pick_types(eeg=True,meg=False)
     epochs_meg = epochs.copy().pick_types(meg=True,eeg=False)
 
-    fwd = mne.read_forward_solution(fwdpath)
-    inv = read_inverse_operator(invpath)
+    fwd = mne.read_forward_solution(fwdpath,verbose=False)
+    inv = read_inverse_operator(invpath,verbose=False)
     method = "MNE"
     snr = 3.
     lambda2 = 1. / snr ** 2
     stc = apply_inverse_epochs(epochs, inv, lambda2,
-                        method=method, pick_ori=None)
+                               method=method, pick_ori=None,verbose=False)
     if justdims is True:
         meas_dims, m, p, n_steps, total_batch_size = prepro(stc, epochs, epochs_eeg,epochs_meg,subject,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate)
         return meas_dims, m, p, n_steps, total_batch_size
