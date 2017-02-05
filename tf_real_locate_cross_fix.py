@@ -25,8 +25,8 @@ for train_id in [7,8]:
         a_test = np.arange(0,total_batch_size_test)
 
         test_frac = .2
-        err_thresh = 5.
-        delta_err_halt = .001
+        err_thresh = 40.
+        delta_err_halt = .0001
         test_size = int(test_frac*total_batch_size_test)
         val_size = int(test_frac*(1.-test_frac)*total_batch_size)
         
@@ -58,14 +58,14 @@ for train_id in [7,8]:
                     for learning_rate in [0.005]:
                         for dropout in [1.0]:
                             for beta in [0.]:
-                                for per_batch in [500]:
+                                for per_batch in [250,500]:
                                     for batch_size in [val_size]:
                                         print "Test size: ", test_size, " Val_size: ", val_size, " Batch size: ", batch_size, " Total size: ", total_batch_size
                                         for batches in [20]:#int((total_batch_size-val_size-test_size_train)/batch_size)]:
                                             print "Batches: ", batches
                                             for k_conv in [3]:
-                                                for n_conv1 in [2]:
-                                                    for n_conv2 in [5]:
+                                                for n_conv1 in [2,3]:
+                                                    for n_conv2 in [5,7]:
                                                         for n_layer in [1,2,3]:
                                                             n_chan_in=2
                                                             k_pool=1
@@ -73,7 +73,7 @@ for train_id in [7,8]:
                                                             n_in=meas_dims[0]*meas_dims[1]*2
                                                             n_dense=int((meas_dims[0]-k_conv+1)/k_pool-k_conv+1)*int((meas_dims[1]-k_conv+1)/k_pool-k_conv+1)*n_conv2
                                                             for n_lstm in [10,25]:
-                                                                val_step=int(per_batch/20)
+                                                                val_step=25
                                                                 if test_id==train_id:
                                                                     meas_img_test, qtrue_test, meas_dims, m, p, n_steps, test_size = nn_prepro.faces_dataset(test_id,selection=test,pca=True,subsample=subsample,justdims=False,cnn=True,locate=True)
                                                                     #pick a test batch
