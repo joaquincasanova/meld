@@ -73,15 +73,15 @@ class tf_meld:
             # Store layers weight & bias
 
             with tf.name_scope('convolutional_layer_1'):
-                wc1 = tf.Variable(tf.random_normal([self.k_conv, self.k_conv, self.n_chan_in, self.n_conv1])) # kxk conv, 2 input, n_conv outputs
-                bc1 = tf.Variable(tf.random_normal([self.n_conv1]))
+                self.wc1 = tf.Variable(tf.random_normal([self.k_conv, self.k_conv, self.n_chan_in, self.n_conv1])) # kxk conv, 2 input, n_conv outputs
+                self.bc1 = tf.Variable(tf.random_normal([self.n_conv1]))
 
                 if self.n_steps is None:
-                    conv1 = conv2d(self.measPH,wc1,bc1,name="conv1")
+                    conv1 = conv2d(self.measPH,self.wc1,self.bc1,name="conv1")
                 else:
                     #reshape to fold batch and timestep indices, needed for compatibility with conv2d
                     measfold = tf.reshape(self.measPH,[-1,self.meas_dims[0], self.meas_dims[1], self.n_chan_in])
-                    conv1 = conv2d(measfold,wc1,bc1,name="conv1")
+                    conv1 = conv2d(measfold,self.wc1,self.bc1,name="conv1")
 
                 conv1 = max_pool(conv1,k=self.k_pool)
 
@@ -89,24 +89,24 @@ class tf_meld:
                 conv1 = tf.nn.dropout(conv1,self.dropoutPH)
 
             with tf.name_scope('convolutional_layer_2'):
-                wc2 = tf.Variable(tf.random_normal([self.k_conv, self.k_conv, self.n_conv1, self.n_conv2])) # kxk conv, 2 input, n_conv outputs
-                bc2 = tf.Variable(tf.random_normal([self.n_conv2]))
-                conv2 = conv2d(conv1,wc2,bc2,name="conv2" )
+                self.wc2 = tf.Variable(tf.random_normal([self.k_conv, self.k_conv, self.n_conv1, self.n_conv2])) # kxk conv, 2 input, n_conv outputs
+                self.bc2 = tf.Variable(tf.random_normal([self.n_conv2]))
+                conv2 = conv2d(conv1,self.wc2,self.bc2,name="conv2" )
                 # Apply Dropout
                 conv2 = tf.nn.dropout(conv2, self.dropoutPH)
 
             with tf.name_scope('dense_layer'):
                 if self.n_steps is None:
-                    wd = tf.Variable(tf.random_normal([self.n_dense, self.n_out]),stddev=std) # fully connected, image inputs, n_out outputs
-                    bd = tf.Variable(tf.random_normal([self.n_out]),stddev=std)
+                    self.wd = tf.Variable(tf.random_normal([self.n_dense, self.n_out]),stddev=std) # fully connected, image inputs, n_out outputs
+                    self.bd = tf.Variable(tf.random_normal([self.n_out]),stddev=std)
                     dense = tf.reshape(conv2, [-1, self.n_dense]) # Reshape conv2 output to fit dense layer input
-                    logits = tf.add(tf.matmul(dense,wd),bd)#logits
+                    logits = tf.add(tf.matmul(dense,self.wd),self.bd)#logits
 
                 else:
                     dense = tf.reshape(conv2, [-1, self.n_dense]) # Reshape conv1 output to fit dense layer input
-                    wd = tf.Variable(tf.truncated_normal([self.n_dense, self.n_lstm], stddev=0.1))
-                    bd = tf.Variable(tf.constant(0.1, shape=[self.n_lstm]))
-                    dense_out = tf.nn.softmax(tf.matmul(dense, wd) + bd,name="dense_out")
+                    self.wd = tf.Variable(tf.truncated_normal([self.n_dense, self.n_lstm], stddev=0.1))
+                    self.bd = tf.Variable(tf.constant(0.1, shape=[self.n_lstm]))
+                    dense_out = tf.nn.softmax(tf.matmul(dense, self.wd) + self.bd,name="dense_out")
                     dense_out = tf.nn.dropout(dense_out, self.dropoutPH)
         else:#NO CNN
             if  self.n_steps is None:
@@ -118,14 +118,14 @@ class tf_meld:
 
             with tf.name_scope('dense_layer'):
                 if self.n_steps is None:
-                    wd = tf.Variable(tf.random_normal([self.meas_dims, self.n_out]),stddev=std) # fully connected, image inputs, n_out outputs
-                    bd = tf.Variable(tf.random_normal([self.n_out]),stddev=std)
-                    logits = tf.add(tf.matmul(self.measPH,wd),bd)#logits
+                    self.wd = tf.Variable(tf.random_normal([self.meas_dims, self.n_out]),stddev=std) # fully connected, image inputs, n_out outputs
+                    self.bd = tf.Variable(tf.random_normal([self.n_out]),stddev=std)
+                    logits = tf.add(tf.matmul(self.measPH,self.wd),self.bd)#logits
                 else:
                     dense = tf.reshape(self.measPH, [-1, self.meas_dims]) # Reshape input to fit dense layer input
-                    wd = tf.Variable(tf.truncated_normal([self.n_dense, self.n_lstm], stddev=0.1))
-                    bd = tf.Variable(tf.constant(0.1, shape=[self.n_lstm]))
-                    dense_out = tf.nn.softmax(tf.matmul(dense, wd) + bd,name="dense_out")
+                    self.wd = tf.Variable(tf.truncated_normal([self.n_dense, self.n_lstm], stddev=0.1))
+                    self.bd = tf.Variable(tf.constant(0.1, shape=[self.n_lstm]))
+                    dense_out = tf.nn.softmax(tf.matmul(dense, self.wd) + self.bd,name="dense_out")
                     dense_out = tf.nn.dropout(dense_out, self.dropoutPH)
                 
         with tf.name_scope('rnn_layer'):
@@ -143,13 +143,13 @@ class tf_meld:
                 
                 outs = tf.reshape(output, [-1, self.n_lstm])#n*bxn_lstm
                 
-                wrnn = tf.Variable(tf.random_normal([self.n_lstm,self.n_out], stddev=std))
-                brnn = tf.Variable(tf.random_normal([self.n_out],stddev=std))
+                self.wrnn = tf.Variable(tf.random_normal([self.n_lstm,self.n_out], stddev=std))
+                self.brnn = tf.Variable(tf.random_normal([self.n_out],stddev=std))
 
-                logits = tf.add(tf.matmul(outs,wrnn),brnn)#logits - b*nxp
+                logits = tf.add(tf.matmul(outs,self.wrnn),self.brnn)#logits - b*nxp
                 #logits = tf.reshape(logits,[-1,self.n_out])#b*nxp
                 
-                logits_last=tf.add(tf.matmul(last,wrnn),brnn)#logits - bxp
+                logits_last=tf.add(tf.matmul(last,self.wrnn),self.brnn)#logits - bxp
 
         with tf.name_scope('cost'):
             if self.n_steps is not None:
@@ -167,10 +167,10 @@ class tf_meld:
 
             if self.cnn is True:
                 reg=tf.multiply(self.betaPH,
-                                tf.add(tf.add(tf.nn.l2_loss(wd),tf.nn.l2_loss(wc1)),
-                                       tf.nn.l2_loss(wc2)))
+                                tf.add(tf.add(tf.nn.l2_loss(self.wd),tf.nn.l2_loss(self.wc1)),
+                                       tf.nn.l2_loss(self.wc2)))
             else:
-                reg=tf.multiply(self.betaPH,tf.nn.l2_loss(wd))
+                reg=tf.multiply(self.betaPH,tf.nn.l2_loss(self.wd))
                 
             A=tf.argmax(logits,1)
             if self.n_steps is None:
