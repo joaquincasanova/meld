@@ -166,8 +166,11 @@ def prepro(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=False,
             tf_meas = meas_class.meas(meg_data,meg_xyz, eeg_data,eeg_xyz, meas_dims, n_steps, total_batch_size)
             if pca is True:
                 tf_meas.pca()
-            else:
+            elif pca is False:
                 tf_meas.scale()
+            else:
+                pass
+            
             tf_meas.interp()
             tf_meas.reshape()
             #tf_meas.plot(1)
@@ -227,8 +230,11 @@ def prepro(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=False,
             tf_meas = meas_class.meas(meg_data,meg_xyz, eeg_data,eeg_xyz, meas_dims, n_steps, total_batch_size)
             if pca is True:
                 tf_meas.pca()
-            else:
+            elif pca is False:
                 tf_meas.scale()
+            else:
+                pass
+
             tf_meas.stack_reshape()
             meas_img_all = tf_meas.meas_stack
             m = tf_meas.m

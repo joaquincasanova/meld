@@ -23,7 +23,7 @@ for subject_id in [7]:
     time.sleep(1)
     fieldnames=['cost','cost_step','batches','learning rate','batch_size','per_batch','dropout','beta','k_conv','n_conv1','n_conv2','n_layer','n_lstm','n_steps','train step','xentropy','rmse','accuracy','xentropy_last','rmse_last','accuracy_last']
     subsample = 1
-    fname = './nn_real_locate_faces_hyper_%s.csv' % subject_id
+    fname = './data/check_nn_real_locate_faces_hyper_%s.csv' % subject_id
     with open(fname,'w') as csvfile:
         writer=csv.DictWriter(csvfile,fieldnames=fieldnames)
         writer.writeheader()

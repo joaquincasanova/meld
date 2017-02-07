@@ -219,12 +219,15 @@ class tf_meld:
                     elif self.cost_func=='rmse':
                         self.train_step = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.rmse)
                     else:
-                        self.train_step = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.cross)
+                        self.train_step = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.rmse)
                 elif self.cost_time=='last':
                     if self.cost_func=='cross':
                         self.train_step = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.cross_last)
                     elif self.cost_func=='rmse':
                         self.train_step = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.rmse_last)
                     else:
-                        self.train_step = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.cross_last)
+                        self.train_step = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.rmse_last)
+                else:
+                    self.train_step = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.rmse_last)
+                    
         self.init_step = tf.initialize_all_variables()
