@@ -16,9 +16,9 @@ import time
 
 #meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size=nn_prepro.aud_dataset(pca=True, subsample=10)
 
-params_list = [[2,5,10,1,.2,.1,.9]]#,[2,5,10,1,.2,.1,.1]]#,[3,7,15,3,.2,.1,.9]
+params_list = [[2,5,10,1,.2,.1,.9],[3,7,15,3,.2,.1,.9]]
 
-for [pca, rand_test] in [['none', False],[True, False],[False, False]]:
+for [pca, rand_test] in [[True, True]]:
     for train_id in [7]:
         for test_id in [7]:
             print 'Train on: ',train_id,' Test on: ',test_id,' PCA: ',pca,' Random: ',rand_test
@@ -100,6 +100,8 @@ for [pca, rand_test] in [['none', False],[True, False],[False, False]]:
 
                         #print "Prob select: ", prob_select
 
+                    
+                    assert np.intersect1d(test,val).size is 0
 
                     print "Test size: ", test_size, " Val_size: ", val_size, " Batch size: ", batch_size, " Total size: ", total_batch_size
                     print "Meas: ", m, " Out: ",p, " Steps: ",n_steps
@@ -140,7 +142,10 @@ for [pca, rand_test] in [['none', False],[True, False],[False, False]]:
                             else:
                                 choose = np.arange(batch_size)
                                 batch=test_size_train+val_size+batch_num*batch_size+choose
-                                
+                            
+                            assert np.intersect1d(batch,test).size is 0
+                            assert np.intersect1d(batch,val).size is 0
+
                             print "Train batch ", batch_num, batch
                             #pick a first batch of batch_size
                             meas_img, qtrue, meas_dims, m, p, n_steps, batch_size = nn_prepro.faces_dataset(train_id,selection=batch,pca=pca,subsample=subsample,justdims=False,cnn=True,locate=True)

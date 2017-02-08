@@ -1,9 +1,9 @@
 import numpy as np
 import time 
 n_tot = 879
-n_test = int(.05*n_tot)
-n_val =  int(.05*(n_tot-n_test))
-n_batch = int(.05*(n_tot-n_test))
+n_test = int(.1*n_tot)
+n_val =  int(.1*(n_tot-n_test))
+n_batch = int(.1*(n_tot-n_test))
 print n_tot, n_test, n_val, n_batch
 a = np.arange(0,n_tot)
 test = np.random.choice(a,n_test,replace=False)
@@ -29,5 +29,5 @@ for bat in range(0,batches):
     p[batch]=0
     p=p*float(n_tot-n_test-n_val-n_batch*bat)/float(n_tot-n_test-n_val-n_batch*(bat+1))
 
-print np.intersect1d(batch,val)
-print np.intersect1d(batch,test)
+assert np.intersect1d(batch,val).size is 0
+assert np.intersect1d(batch,test).size is 0
