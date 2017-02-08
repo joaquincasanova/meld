@@ -16,16 +16,16 @@ import time
 
 #meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size=nn_prepro.aud_dataset(pca=True, subsample=10)
 
-params_list = [[2,5,10,1,.2,.1,.1],[2,5,10,1,.2,.1,.1]]#,[3,7,15,3,.2,.2,.2],[3,7,15,3,.2,.1,.1],[2,5,10,2,.2,.05,.05],[3,7,15,3,.2,.05,.05]]
+params_list = [[2,5,10,1,.2,.1,.9]]#,[2,5,10,1,.2,.1,.1]]#,[3,7,15,3,.2,.1,.9]
 
-for [pca, rand_test] in [[True, False],[True, True],[False, False],[False, True]]:
+for [pca, rand_test] in [['none', False],[True, False],[False, False]]:
     for train_id in [7]:
         for test_id in [7]:
             print 'Train on: ',train_id,' Test on: ',test_id,' PCA: ',pca,' Random: ',rand_test
             fieldnames=['cost','cost_step','batches','learning rate','batch_size','per_batch','dropout','beta','k_conv','n_conv1','n_conv2','n_layer','n_lstm','n_steps','train step','xentropy','rmse','accuracy','xentropy_last','rmse_last','accuracy_last']
             subsample = 1
-            fname = './data/nn_real_zss_%s_%s_pca_%s_rand_%s.csv' % (train_id, test_id, pca, rand_test)
-            with open(fname,'w') as csvfile:
+            fname = './data/nn_real_relu_%s_%s_pca_%s_rand_%s.csv' % (train_id, test_id, pca, rand_test)
+            with open(fname,'a') as csvfile:
                 writer=csv.DictWriter(csvfile,fieldnames=fieldnames)
                 writer.writeheader()
 
@@ -46,7 +46,6 @@ for [pca, rand_test] in [[True, False],[True, True],[False, False],[False, True]
                     learning_rate = 0.001
                     dropout = 1.0
                     beta = 0.
-                    per_batch = 500
                     k_conv = 3
                     n_chan_in=2
                     k_pool=1
@@ -106,7 +105,9 @@ for [pca, rand_test] in [[True, False],[True, True],[False, False],[False, True]
                     print "Meas: ", m, " Out: ",p, " Steps: ",n_steps
 
                     batches = int((total_batch_size-val_size-test_size_train)/batch_size)
-                    print "Batches: ", batches, " Batches*batch_size: ", batches*batch_size, " Train set size: ",(total_batch_size-val_size-test_size_train)
+                    
+                    per_batch = int(5000/batches)
+                    print "Batches: ", batches, " Batches*batch_size: ", batches*batch_size, " Train set size: ",(total_batch_size-val_size-test_size_train), " Per batch: ", per_batch
 
                     n_in=meas_dims[0]*meas_dims[1]*2
                     n_dense=int((meas_dims[0]-k_conv+1)/k_pool-k_conv+1)*int((meas_dims[1]-k_conv+1)/k_pool-k_conv+1)*n_conv2

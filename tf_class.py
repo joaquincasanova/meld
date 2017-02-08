@@ -125,7 +125,7 @@ class tf_meld:
                     dense = tf.reshape(self.measPH, [-1, self.meas_dims]) # Reshape input to fit dense layer input
                     self.wd = tf.Variable(tf.truncated_normal([self.n_dense, self.n_lstm], stddev=0.1))
                     self.bd = tf.Variable(tf.constant(0.1, shape=[self.n_lstm]))
-                    dense_out = tf.nn.softmax(tf.matmul(dense, self.wd) + self.bd,name="dense_out")
+                    dense_out = tf.nn.relu(tf.matmul(dense, self.wd) + self.bd,name="dense_out")#try relu
                     dense_out = tf.nn.dropout(dense_out, self.dropoutPH)
                 
         with tf.name_scope('rnn_layer'):
@@ -204,7 +204,7 @@ class tf_meld:
                 self.rmse_last = tf.add(tf.sqrt(tf.reduce_mean(tf.square(tf.sub(qtrue_last,qhat_last))),name="rmse_last"),reg)
             
         with tf.name_scope('train_step'):
-            #use rmse as cost function if you are trying to fit current density.
+            #use rmse as cost function if you are trying to fit current density OR location.
             if self.n_steps is None:
                 if self.cost_func=='cross':
                     self.train_step = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.cross)

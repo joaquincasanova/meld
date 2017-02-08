@@ -7,11 +7,11 @@ from matplotlib.ticker import LinearLocator, FormatStrFormatter
 import matplotlib.pyplot as plt
 import time
 fieldnames=['cost','cost_step','batches','learning rate','batch_size','per_batch','dropout','beta','k_conv','n_conv1','n_conv2','n_layer','n_lstm','n_steps','train step','xentropy','rmse','accuracy','xentropy_last','rmse_last','accuracy_last']
-for [pca, rand_test] in [[True, False],[False, False],['none', False],[True, True],[False, True],['none', True]]:
+for [pca, rand_test] in [[True, False],[True, True],[False, False],[False, True]]:
     for train_id in [7]:
         for test_id in [7]:
             fname = './data/nn_real_zss_%s_%s_pca_%s_rand_%s.csv' % (train_id, test_id, pca, rand_test)
-
+            print fname
             data=np.zeros([1,13])
             csvfile = open(fname,'r')
             try:
@@ -70,7 +70,7 @@ for [pca, rand_test] in [[True, False],[False, False],['none', False],[True, Tru
             col_acc_last=11       
             col_ce_last=12   
 
-            params_list = [[2,5,10,2,175,35,35],[2,5,10,2,175,70,70],[2,5,10,2,175,140,140]]
+            params_list = [[2,5,10,1,175,70,70],[2,5,10,1,175,70,633]]
 
             err_col_vals=[7,10]#[3,4,5,6,7,8]
 
@@ -93,15 +93,15 @@ for [pca, rand_test] in [[True, False],[False, False],['none', False],[True, Tru
                     lab='n_conv1='+str(cn1)+', n_conv2='+str(cn2)+', n_lstm='+str(ls)+', n_layers='+str(la)+', batch size='+str(ns)
                     print lab
                     picks = np.where(data[:,col_n_lstm]==ls)
-                    print picks
+                    #print picks
                     picks = np.intersect1d(picks, np.where(data[:,col_n_conv1]==cn1))
-                    print picks
+                    #print picks
                     picks = np.intersect1d(picks, np.where(data[:,col_n_conv2]==cn2))
-                    print picks
+                    #print picks
                     picks = np.intersect1d(picks, np.where(data[:,col_n_layer]==la))
-                    print picks
+                    #print picks
                     picks = np.intersect1d(picks, np.where(data[:,col_size]==ns))
-                    print picks
+                    #print picks
                     test = picks
                     val = picks
                     picks = np.intersect1d(picks, np.where(data[:,col_step]>=0))
