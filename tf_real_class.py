@@ -16,7 +16,7 @@ import time
 
 #meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size=nn_prepro.aud_dataset(pca=True, subsample=10)
 
-params_list = [[2,5,10,1,.2,.1,.9],[3,7,15,3,.2,.1,.9]]
+params_list = [[2,5,10,1,.2,.1,.1],[3,7,15,3,.2,.1,.1]]
 
 for [pca, rand_test] in [[True, True]]:
     for train_id in [7]:
@@ -24,7 +24,7 @@ for [pca, rand_test] in [[True, True]]:
             print 'Train on: ',train_id,' Test on: ',test_id,' PCA: ',pca,' Random: ',rand_test
             fieldnames=['cost','cost_step','batches','learning rate','batch_size','per_batch','dropout','beta','k_conv','n_conv1','n_conv2','n_layer','n_lstm','n_steps','train step','xentropy','rmse','accuracy','xentropy_last','rmse_last','accuracy_last']
             subsample = 1
-            fname = './data/nn_real_relu_%s_%s_pca_%s_rand_%s.csv' % (train_id, test_id, pca, rand_test)
+            fname = './data/check_nn_real_relu_%s_%s_pca_%s_rand_%s.csv' % (train_id, test_id, pca, rand_test)
             with open(fname,'a') as csvfile:
                 writer=csv.DictWriter(csvfile,fieldnames=fieldnames)
                 writer.writeheader()
@@ -125,11 +125,12 @@ for [pca, rand_test] in [[True, True]]:
                     #pick a val batch
                     print "Val batch ",val
 
+                    err_lv_prev = 1000.
+                    err_lv = 500.
+                    
                     cnn_rnn=tf_class.tf_meld(learning_rate,meas_dims,k_conv,k_pool,n_chan_in,n_conv1,n_conv2,n_out,n_steps,n_lstm,n_layer,cost_func=cost,cost_time=cost_step,beta=beta,cnn=True)
                     tf.reset_default_graph()
                     cnn_rnn.network()
-                    err_lv_prev = 1000.
-                    err_lv = 500.
                     with tf.Session() as session:
 
                         session.run(cnn_rnn.init_step)
@@ -157,14 +158,15 @@ for [pca, rand_test] in [[True, True]]:
                             while step<per_batch:# and abs(err_l-err_l_prev)/err_l_prev>delta_err_halt:
                                 err_l_prev=err_l
 
-                                _ , guess,ce,acc,err,ce_l,acc_l,err_l  = session.run([cnn_rnn.train_step, cnn_rnn.qhat, cnn_rnn.cross, cnn_rnn.accuracy,cnn_rnn.rmse, cnn_rnn.cross_last, cnn_rnn.accuracy_last,cnn_rnn.rmse_last],
+                                _ , guess,ce,acc,err,ce_l,acc_l,err_l = session.run([cnn_rnn.train_step, cnn_rnn.qhat, cnn_rnn.cross, cnn_rnn.accuracy,cnn_rnn.rmse, cnn_rnn.cross_last, cnn_rnn.accuracy_last,cnn_rnn.rmse_last],
                                                                                      feed_dict={cnn_rnn.qtruePH: qtrue, cnn_rnn.measPH: meas_img, cnn_rnn.dropoutPH: dropout, cnn_rnn.betaPH: beta})
                                 
 
                                 if step % 10==0:
                                     print "Train Step: ", step, "CE: ",ce, " Accuracy: ", acc, "RMSE: ", err, "CE last: ",ce_l, " Accuracy last: ", acc_l, "RMSE last: ", err_l
-                                    #print "Error change: ",err_l,abs(err_l-err_l_prev)/err_l_prev
+                                    
                                 writer.writerow({'cost':cost,'cost_step':cost_step,'batches':batches,'learning rate':learning_rate,'batch_size':batch_size,'per_batch':per_batch,'dropout':dropout,'beta':beta,'k_conv':k_conv,'n_conv1':n_conv1,'n_conv2':n_conv2,'n_layer':n_layer,'n_steps':n_steps,'n_lstm':n_lstm,'train step':step,'xentropy':ce,'rmse':err,'accuracy':acc,'xentropy_last':ce_l,'rmse_last':err_l,'accuracy_last':acc_l})
+
 
 
                                 if step % val_step==0 and step!=0:
@@ -182,6 +184,9 @@ for [pca, rand_test] in [[True, True]]:
                                     writer.writerow({'cost':cost,'cost_step':cost_step,'batches':batches,'learning rate':learning_rate,'batch_size':batch_size,'per_batch':per_batch,'dropout':dropout,'beta':beta,'k_conv':k_conv,'n_conv1':n_conv1,'n_conv2':n_conv2,'n_layer':n_layer,'n_lstm':n_lstm,'n_steps':n_steps,'train step':-1,'xentropy':cev,'rmse':errv,'accuracy':accv,'xentropy_last':ce_lv,'rmse_last':err_lv,'accuracy_last':acc_lv})
 
                                 step+=1
+                                    
+                        save_path = cnn_rnn.saver.save(session, "./data/model.ckpt")
+                        print("Model saved in file: %s" % save_path)
 
                         #test batch
                         guess,cet,acct,errt,ce_lt,acc_lt,err_lt = session.run([cnn_rnn.qhat, cnn_rnn.cross, cnn_rnn.accuracy,cnn_rnn.rmse, cnn_rnn.cross_last, cnn_rnn.accuracy_last,cnn_rnn.rmse_last],

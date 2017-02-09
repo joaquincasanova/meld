@@ -229,5 +229,6 @@ class tf_meld:
                         self.train_step = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.rmse_last)
                 else:
                     self.train_step = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.rmse_last)
-                    
-        self.init_step = tf.initialize_all_variables()
+            self.saver = tf.train.Saver()
+            
+        self.init_step = tf.global_variables_initializer()

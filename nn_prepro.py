@@ -141,7 +141,7 @@ def prepro(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=False,
         else:
             if selection is 'all':
                 total_batch_size = len(stc)#number of events. we'll consider each event an example.
-            else:
+            else:                
                 total_batch_size = len(selection)#number of events. we'll consider each event an example.
 
             n_eeg = epochs_eeg.get_data().shape[1]
