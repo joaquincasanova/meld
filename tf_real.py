@@ -248,15 +248,17 @@ params_list = [[2,5,10,1,.2,.1,.1],[3,7,15,3,.2,.1,.1]]
 
 for [pca, rand_test] in [[True, True]]:
     cnn=False
-    locate=True
-    subsample = 1
-            
+    locate=False
+    subsample = 20
+
+    cost  = 'cross'
+    cost_step = 'last'            
     for train_id in [7]:
         for test_id in [7]:
             print 'Train on: ',train_id,' Test on: ',test_id,' PCA: ',pca,' Random: ',rand_test
             fieldnames=['cost','cost_step','batches','learning rate','batch_size','per_batch','dropout','beta','k_conv','n_conv1','n_conv2','n_layer','n_lstm','n_steps','train step','xentropy','rmse','accuracy','xentropy_last','rmse_last','accuracy_last']
             
-            fname = './data/nn_real_%s_%s_pca_%s_rand_%s.csv' % (train_id, test_id, pca, rand_test)
+            fname = './data/nn_real_nocnn_%s_%s_pca_%s_rand_%s.csv' % (train_id, test_id, pca, rand_test)
             with open(fname,'a') as csvfile:
                 writer=csv.DictWriter(csvfile,fieldnames=fieldnames)
                 writer.writeheader()
@@ -273,8 +275,6 @@ for [pca, rand_test] in [[True, True]]:
                     delta_err_halt = 2e-5
 
                     val_step=50
-                    cost  = 'ce'
-                    cost_step = 'last'
                     learning_rate = 0.001
                     dropout = 1.0
                     beta = 0.

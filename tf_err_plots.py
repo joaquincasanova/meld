@@ -7,7 +7,8 @@ from matplotlib.ticker import LinearLocator, FormatStrFormatter
 import matplotlib.pyplot as plt
 import time
 fieldnames=['cost','cost_step','batches','learning rate','batch_size','per_batch','dropout','beta','k_conv','n_conv1','n_conv2','n_layer','n_lstm','n_steps','train step','xentropy','rmse','accuracy','xentropy_last','rmse_last','accuracy_last']
-for [pfx,pca, rand_test] in [['zss',True, False],['zss',True, True],['zss',False, False],['zss',False, True],['relu',True, True]]:
+#['zss',True, False],['zss',True, True],['zss',False, False],['zss',False, True],
+for [pfx,pca, rand_test] in [['relu',True, True]]:
     for train_id in [7]:
         for test_id in [7]:
             fname = './data/nn_real_%s_%s_%s_pca_%s_rand_%s.csv' % (pfx,train_id, test_id, pca, rand_test)
@@ -70,7 +71,7 @@ for [pfx,pca, rand_test] in [['zss',True, False],['zss',True, True],['zss',False
             col_acc_last=11       
             col_ce_last=12   
 
-            params_list = [[2,5,10,1,175,70,70],[2,5,10,1,175,70,633]]
+            params_list = [[2,5,10,1,175,70,633],[3,7,15,3,175,70,633]]
 
             err_col=10
 
@@ -107,7 +108,7 @@ for [pfx,pca, rand_test] in [['zss',True, False],['zss',True, True],['zss',False
                 test_last=np.mean(data[test,err_col])
                 val = np.intersect1d(val, np.where(data[:,col_step]==-1))
 
-                print data[val,err_col]
+                #print data[val,err_col]
 
                 val_last=np.mean(data[val,err_col])
 
