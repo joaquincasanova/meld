@@ -11,7 +11,7 @@ import time
 
 #meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size=nn_prepro.aud_dataset(pca=True, subsample=10)
 
-params_list = [[3,7,30,1,.2,.1,.1]]
+params_list = [[3,7,100,3,.2,.1,.1]]
 pca = True
 rand_test = True
 subject_id = 7
