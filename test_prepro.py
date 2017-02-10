@@ -7,7 +7,8 @@ from matplotlib.ticker import LinearLocator, FormatStrFormatter
 import matplotlib.pyplot as plt
 import time
 import nn_prepro
-test = np.random.choice(879,1,replace=False)
+
+test, val, batch_list, batches = nn_prepro.ttv(879,.2,.1,.1,rand_test=True)
 test_id=7
 pca=True
 subsample=1

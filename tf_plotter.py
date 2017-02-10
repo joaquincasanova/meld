@@ -7,10 +7,11 @@ from matplotlib.ticker import LinearLocator, FormatStrFormatter
 import matplotlib.pyplot as plt
 import time
 fieldnames=['cost','cost_step','batches','learning rate','batch_size','per_batch','dropout','beta','k_conv','n_conv1','n_conv2','n_layer','n_lstm','n_steps','train step','xentropy','rmse','accuracy','xentropy_last','rmse_last','accuracy_last']
-for [pca, rand_test] in [[True, False],[True, True],[False, False],[False, True]]:
+#['zss',True, False],['zss',True, True],['zss',False, False],['zss',False, True],
+for [pfx,pca, rand_test] in [['relu',True, True]]:
     for train_id in [7]:
         for test_id in [7]:
-            fname = './data/nn_real_zss_%s_%s_pca_%s_rand_%s.csv' % (train_id, test_id, pca, rand_test)
+            fname = './data/nn_real_%s_%s_%s_pca_%s_rand_%s.csv' % (pfx,train_id, test_id, pca, rand_test)
             print fname
             data=np.zeros([1,13])
             csvfile = open(fname,'r')
@@ -70,62 +71,73 @@ for [pca, rand_test] in [[True, False],[True, True],[False, False],[False, True]
             col_acc_last=11       
             col_ce_last=12   
 
-            params_list = [[2,5,10,1,175,70,70],[2,5,10,1,175,70,633]]
+            params_list = [[2,5,10,1,175,70,633],[3,7,15,3,175,70,633]]
 
-            err_col_vals=[7,10]#[3,4,5,6,7,8]
+            err_col=10
 
-            err_col_lab=['RMSE','RMSE Last']#['RMSE','Accuracy','Cross Entropy','RMSE Last','Accuracy Last','Cross Entropy Last']
+            err_col_lab=['RMSE Train','RMSE Val']
 
             data=np.delete(data,(0),axis=0)
             leg=[('-','b'), ('-','g'),('-', 'r'), ('-','k'),(':','b'), (':','g'),(':', 'r'), (':','k'),('--','b'), ('--','g'),('--', 'r'), ('--','k'),('-.','b'), ('-.','g'),('-.', 'r'), ('-.','k')]
             idx = 0
             for [cn1, cn2, ls, la, ts, vs, ns] in params_list:
-                idx+=1
-                edx=0
-                for e in err_col_vals:
-                    edx+=1 
+                idx+=1 
 
-                    plt.subplot(3, 1, edx)
 
-                    col=leg[idx-1][1]
-                    lin=leg[idx-1][0]
+                col=leg[idx-1][1]
+                lin=leg[idx-1][0]
 
-                    lab='n_conv1='+str(cn1)+', n_conv2='+str(cn2)+', n_lstm='+str(ls)+', n_layers='+str(la)+', batch size='+str(ns)
-                    print lab
-                    picks = np.where(data[:,col_n_lstm]==ls)
-                    #print picks
-                    picks = np.intersect1d(picks, np.where(data[:,col_n_conv1]==cn1))
-                    #print picks
-                    picks = np.intersect1d(picks, np.where(data[:,col_n_conv2]==cn2))
-                    #print picks
-                    picks = np.intersect1d(picks, np.where(data[:,col_n_layer]==la))
-                    #print picks
-                    picks = np.intersect1d(picks, np.where(data[:,col_size]==ns))
-                    #print picks
-                    test = picks
-                    val = picks
-                    picks = np.intersect1d(picks, np.where(data[:,col_step]>=0))
-                    test = np.intersect1d(test, np.where(data[:,col_step]<=-2))
-                    test_acc_last=np.mean(data[test,10])
-                    val = np.intersect1d(val, np.where(data[:,col_step]==-1))
-                    print data[val,10]
-                    val_acc_last=np.mean(data[val,10])
-                    lab=lab+', val rmse='+str(val_acc_last)+', test rmse='+str(test_acc_last)
+                lab='n_conv1='+str(cn1)+', n_conv2='+str(cn2)+', n_lstm='+str(ls)+', n_layers='+str(la)+', batch size='+str(ns)
+                print lab
+                
+                picks = np.where(data[:,col_n_lstm]==ls)
+                #print picks
+                picks = np.intersect1d(picks, np.where(data[:,col_n_conv1]==cn1))
+                #print picks
+                picks = np.intersect1d(picks, np.where(data[:,col_n_conv2]==cn2))
+                #print picks
+                picks = np.intersect1d(picks, np.where(data[:,col_n_layer]==la))
+                #print picks
+                picks = np.intersect1d(picks, np.where(data[:,col_size]==ns))
+                #print picks
+                test = picks
+                val = picks
+                picks = np.intersect1d(picks, np.where(data[:,col_step]>=0))
+                test = np.intersect1d(test, np.where(data[:,col_step]<=-2))
 
-                    #print len(picks)
-                    #time.sleep(1)
-                    data_slice_x=data[picks,col_step].reshape([1,-1])
+                test_last=np.mean(data[test,err_col])
+                val = np.intersect1d(val, np.where(data[:,col_step]==-1))
 
-                    data_slice_xp=np.arange(0,data_slice_x.shape[1]).reshape([1,-1])
-                    data_slice_y=data[picks,e].reshape([1,-1])
-                    plt.plot(data_slice_xp.T, data_slice_y.T,linestyle=lin,color=col,label=lab)
+                #print data[val,err_col]
 
-                    plt.xlim(0,500*10.)
-                    plt.ylabel(err_col_lab[edx-1])
-                    if edx==2:
-                        plt.xlabel('Step')
+                val_last=np.mean(data[val,err_col])
 
-                    if edx==2:
-                        legend = plt.legend(loc=(0,-1.),labelspacing=0)
+                lab=lab+', test rmse='+str(test_last)
+
+                #print len(picks)
+                #time.sleep(1)
+                data_slice_x=np.arange(0,data[picks,col_step].reshape([1,-1]).shape[1]).reshape([1,-1])
+                data_slice_y=data[picks,err_col].reshape([1,-1])
+
+                data_val_x=np.arange(0,data[val,err_col].shape[0]).reshape([1,-1])
+                data_val_y=data[val,err_col].reshape([1,-1])
+
+                plt.subplot(3, 1, 1)
+
+                plt.plot(data_slice_x.T, data_slice_y.T,linestyle=lin,color=col,label=lab)
+
+                plt.xlim(0,500*10.)
+                plt.ylabel(err_col_lab[0])
+                
+                plt.subplot(3, 1, 2)
+
+                plt.plot(data_val_x.T, data_val_y.T,linestyle=lin,color=col,label=lab)
+
+                plt.xlim(0,100)
+                plt.ylabel(err_col_lab[1])
+                
+                plt.xlabel('Step')
+
+                legend = plt.legend(loc=(0,-1.),labelspacing=0)
             plt.show()
 

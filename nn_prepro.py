@@ -4,7 +4,6 @@ from numpy import matlib
 import sphere
 import dipole_class_xyz
 import tensorflow as tf
-import tf_class
 import csv
 import meas_class
 import mne
@@ -198,7 +197,12 @@ def prepro(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=False,
             else:
                 p = stc[0]._data.shape[0]
             n_steps = stc[0]._data.shape[1]
-            meas_dims=epochs.get_data().shape[1]
+
+            n_eeg = epochs_eeg.get_data().shape[1]
+            n_meg = epochs_meg.get_data().shape[1]
+
+            meas_dims=n_eeg+n_meg
+            print "Meas dims in: ", meas_dims
             m = meas_dims
             del stc, epochs, epochs_eeg, epochs_meg
             return meas_dims, m, p, n_steps, total_batch_size
@@ -317,3 +321,65 @@ def merge_2(s1,s2,selection1='all',selection2='all',selection='all',pca=False,su
     qtrue = qtrue[selection,:,:]
 
     return meas_img, qtrue, meas_dims, m, p, n_steps, len(selection) 
+
+def ttv(total,test_frac,val_frac,batch_frac,rand_test=True):
+
+    a = np.arange(0,total)
+
+    test_size = int(test_frac*total)
+    val_size = int(val_frac*(total-test_size))             
+    batch_size = int(batch_frac*(total-test_size))
+
+    if rand_test is True:
+        test = np.random.choice(a,test_size,replace=False)
+    else:
+        test = np.arange(0,test_size)
+        
+    prob_select = np.ones(a.shape)/float(total-test_size)
+    prob_select[test]=0.
+
+    if rand_test is True:                     
+        val = np.random.choice(a,val_size,replace=False,p=prob_select)
+    else:
+        val = np.arange(test_size,test_size+val_size)
+
+    prob_select[val]=0.
+    prob_select*=float(total-test_size)/float(total-test_size-val_size)
+    
+    batches = int((total-val_size-test_size)/batch_size)
+
+                    
+    assert np.intersect1d(test,val).size is 0
+
+    batch_num=0
+    if rand_test is True:
+        batch=np.random.choice(a,batch_size,replace=False,p=prob_select)
+    else:
+        choose = np.arange(batch_size)
+        batch=test_size+val_size+batch_num*batch_size+choose
+
+    assert np.intersect1d(batch,test).size is 0
+    assert np.intersect1d(batch,val).size is 0
+
+    print "Train batch ", batch_num, batch
+    prob_select*=float(total-test_size-val_size-batch_size*batch_num)/float(total-test_size-val_size-batch_size*(batch_num+1))
+    prob_select[batch]=0.
+    batch_list = [batch]
+    for batch_num in range(1,batches):
+        if rand_test is True:
+            batch=np.random.choice(a,batch_size,replace=False,p=prob_select)
+        else:
+            choose = np.arange(batch_size)
+            batch=test_size+val_size+batch_num*batch_size+choose
+                            
+        assert np.intersect1d(batch,test).size is 0
+        assert np.intersect1d(batch,val).size is 0
+
+        print "Train batch ", batch_num, batch
+        prob_select*=float(total-test_size-val_size-batch_size*batch_num)/float(total-test_size-val_size-batch_size*(batch_num+1))
+        prob_select[batch]=0.
+        batch_list.append(batch)
+        
+    print "Batches: ", batches, " Batches*batch_size: ", batches*batch_size, " Train set size: ",(total-val_size-test_size)
+
+    return test, val, batch_list, batches

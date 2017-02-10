@@ -251,7 +251,7 @@ for [pca, rand_test] in [[True, True]]:
     locate=False
     subsample = 20
 
-    cost  = 'cross'
+    cost  = 'cros's
     cost_step = 'last'            
     for train_id in [7]:
         for test_id in [7]:
