@@ -20,7 +20,7 @@ def aud_dataset(selection='all',pca=False,subsample=1,justdims=True,cnn=True,loc
     tmin = -0.2  # start of each epoch (200ms before the trigger)
     tmax = 0.5  # end of each epoch (500ms after the trigger)
     subject='sample'
-    raw = mne.io.read_raw_fif(raw_fname, add_eeg_ref=False, preload=True)
+    raw = mne.io.read_raw_fif(raw_fname, add_eeg_ref=False, preload=True,verbose=False)
 
     raw.set_eeg_reference()  # set EEG average reference
 
@@ -39,13 +39,13 @@ def aud_dataset(selection='all',pca=False,subsample=1,justdims=True,cnn=True,loc
                 'left/visual': 3, 'right/visual': 4}
 
     epochs = mne.Epochs(raw, events, event_id, tmin, tmax, proj=True, picks=picks,
-                        baseline=baseline, reject=reject, add_eeg_ref=False, preload=True)
+                        baseline=baseline, reject=reject, add_eeg_ref=False, preload=True,verbose=False)
     epochs_eeg = epochs.copy().pick_types(eeg=True,meg=False)
     epochs_meg = epochs.copy().pick_types(meg=True,eeg=False)
 
 
     noise_cov = mne.compute_covariance(
-        epochs, tmax=0., method=['shrunk', 'empirical'])
+        epochs, tmax=0., method=['shrunk', 'empirical'],verbose=False)
 
     ###############################################################################
     # Inverse modeling: MNE/dSPM on evoked and raw data
@@ -54,7 +54,7 @@ def aud_dataset(selection='all',pca=False,subsample=1,justdims=True,cnn=True,loc
     # Read the forward solution and compute the inverse operator
 
     fname_fwd = data_path + '/MEG/sample/sample_audvis-meg-oct-5-fwd.fif'
-    fwd = mne.read_forward_solution(fname_fwd, surf_ori=True)
+    fwd = mne.read_forward_solution(fname_fwd, surf_ori=True,verbose=False)
 
     # Restrict forward solution as necessary
     fwd = mne.pick_types_forward(fwd, meg=True, eeg=True)
@@ -62,10 +62,10 @@ def aud_dataset(selection='all',pca=False,subsample=1,justdims=True,cnn=True,loc
     # make an inverse operator
     info = epochs.info
     inverse_operator = make_inverse_operator(info, fwd, noise_cov,
-                                             loose=0.2, depth=0.8)
+                                             loose=0.2, depth=0.8,verbose=False)
 
     write_inverse_operator('sample_audvis-meg-oct-5-inv.fif',
-                           inverse_operator)
+                           inverse_operator,verbose=False)
 
     ###############################################################################
     # Compute inverse solution
@@ -75,7 +75,7 @@ def aud_dataset(selection='all',pca=False,subsample=1,justdims=True,cnn=True,loc
     snr = 3.
     lambda2 = 1. / snr ** 2
     stc = apply_inverse_epochs(epochs, inverse_operator, lambda2,
-                        method=method, pick_ori=None)
+                        method=method, pick_ori=None,verbose=False)
     #stc.save('sample_audvis-source-epochs')
  
     if justdims is True:
@@ -275,7 +275,10 @@ def location(stc,subject,selection='all'):
             
             #for m in range(0,ns):
             #    mxvtx = vtx[hemi[m]][mxloc[m]-hemi[m]*hem0]#1xn_steps
-            loc[s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,verbose=False)
+            if subject is 'sample':
+                loc[s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,subjects_dir='/home/jcasa/mne_data/MNE-sample-data/subjects',verbose=False)
+            else:
+                loc[s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,verbose=False)
         qtrue_all = loc
         p=3
         return qtrue_all, p
@@ -296,7 +299,10 @@ def location(stc,subject,selection='all'):
             
             #for m in range(0,ns):
             #    mxvtx = vtx[hemi[m]][mxloc[m]-hemi[m]*hem0]#1xn_steps
-            loc[s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,verbose=False)
+            if subject is 'sample':
+                loc[s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,subjects_dir='/home/jcasa/mne_data/MNE-sample-data/subjects',verbose=False)
+            else:
+                loc[s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,verbose=False)
         qtrue_all = loc
         p=3
         return qtrue_all, p
