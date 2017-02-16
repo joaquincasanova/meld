@@ -131,7 +131,7 @@ def prepro(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=False,
             else:
                 p = stc[0]._data.shape[0]
             n_steps = stc[0]._data.shape[1]
-            meas_dims=[11,11]
+            meas_dims=[32,32]
             m = meas_dims[0]*meas_dims[1]
             del stc, epochs, epochs_eeg, epochs_meg
             if locate is True:
@@ -160,7 +160,7 @@ def prepro(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=False,
 
             n_steps=meg_data.shape[2]
 
-            meas_dims=[11,11]
+            meas_dims=[32,32]
             print "Image grid dimensions: ", meas_dims
             tf_meas = meas_class.meas(meg_data,meg_xyz, eeg_data,eeg_xyz, meas_dims, n_steps, total_batch_size)
             if pca is True:
@@ -172,7 +172,8 @@ def prepro(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=False,
             
             tf_meas.interp()
             tf_meas.reshape()
-            #tf_meas.plot(1)
+            #for b in range(0,n_steps*total_batch_size):
+            #    tf_meas.plot(b)
             meas_img_all = tf_meas.meas_img
             m = tf_meas.m
 
@@ -332,9 +333,9 @@ def ttv(total,test_frac,val_frac,batch_frac,rand_test=True):
 
     a = np.arange(0,total)
 
-    test_size = int(test_frac*total)
-    val_size = int(val_frac*(total-test_size))             
-    batch_size = int(batch_frac*(total-test_size))
+    test_size = max(int(test_frac*total),1)
+    val_size = max(int(val_frac*(total-test_size)),1)             
+    batch_size = max(int(batch_frac*(total-test_size)),1)
 
     if rand_test is True:
         test = np.random.choice(a,test_size,replace=False)

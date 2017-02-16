@@ -132,7 +132,7 @@ class meas:
                 #print "Apply interp function for step ", step
                 self.meas_out[channel][:,step]=out.ravel()
                 #mxbatch_size*n_steps
-        del self.X0, self.Y0,self.Z0, self.R0,self.AZ0, self.EL0, self.meas_in, self.meas_xyz
+        #del self.X0, self.Y0,self.Z0, self.R0,self.AZ0, self.EL0, self.meas_in, self.meas_xyz
     def reshape(self):
         self.meas_img=np.array(self.meas_out).reshape([2,-1,self.batch_size,self.n_steps])#2xmxbatchsizexnsteps
         self.meas_img=np.transpose(self.meas_img,(2,3,0,1))#batch_sizexnstepsx2xm

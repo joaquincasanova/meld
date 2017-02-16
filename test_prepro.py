@@ -27,12 +27,13 @@ if subject_id is 'aud':
 else:
     meas_img_test, qtrue_test, meas_dims, m, p, n_steps, test_size = nn_prepro.faces_dataset(subject_id,selection=test,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate)
 
-z = np.squeeze(qtrue_test[0,:,2])
-y = np.squeeze(qtrue_test[0,:,1])
-x = np.squeeze(qtrue_test[0,:,0])
+for b in range(0,test_size):
+    z = np.squeeze(qtrue_test[b,:,2])
+    y = np.squeeze(qtrue_test[b,:,1])
+    x = np.squeeze(qtrue_test[b,:,0])
 
-fig = plt.figure()
-ax = fig.gca(projection='3d')
-ax.plot(x, y, z)
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')
+    ax.plot(x, y, z,'o')
 
-plt.show()
+    plt.show()
