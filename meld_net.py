@@ -58,10 +58,6 @@ class meld:
         else:
             self.n_dense=self.meas_dims
         print "n_dense: ", self.n_dense
-        if self.n_out==3:
-            self.std=10.
-        else:
-            self.std=0.1
 
     def cnn_nn(self):        
         # Store layers weight & bias
@@ -93,7 +89,7 @@ class meld:
             variable_summaries(bd, 'bd')
             dense_out = tf.add(tf.matmul(dense, wd),bd)
             self.logits = tf.nn.dropout(dense_out, self.dropoutPH)
-            if self.n_out==3:
+            if (self.n_out%3)==0:
                 self.qhat = self.logits
             else:
                 self.qhat = tf.nn.softmax(self.logits,name="qhat")
@@ -126,7 +122,7 @@ class meld:
                 
             outs = tf.reshape(output, [-1, self.n_lstm])#n*bxn_lstm
                 
-            wrnn = tf.Variable(tf.random_normal([self.n_lstm,self.n_out], stddev=self.std))
+            wrnn = tf.Variable(tf.random_normal([self.n_lstm,self.n_out]))
             brnn = tf.Variable(tf.random_normal([self.n_out]))
             variable_summaries(wrnn, 'wrnn')
             variable_summaries(brnn, 'brnn')
@@ -136,7 +132,7 @@ class meld:
                 
             self.logits_last=tf.add(tf.matmul(last,wrnn),brnn)#logits - bxp
 
-            if self.n_out==3:
+            if (self.n_out%3)==0:
                 self.qhat = self.logits
                 self.qhat_last = self.logits_last                
             else:
@@ -201,7 +197,7 @@ class meld:
             self.logits = tf.add(tf.matmul(outs,wrnn),brnn)#self.logits - b*nxp
             self.logits_last=tf.add(tf.matmul(last,wrnn),brnn)#logits - bxp
 
-            if self.n_out==3:
+            if (self.n_out%3)==0:
                 self.qhat = self.logits
                 self.qhat_last = self.logits_last                
             else:
@@ -229,7 +225,7 @@ class meld:
             variable_summaries(wo, 'wo')
             variable_summaries(bo, 'bo')
             self.logits = tf.add(tf.matmul(dense_out, wo),bo)
-            if self.n_out==3:
+            if (self.n_out%3)==0:
                 self.qhat = self.logits
             else:
                 self.qhat = tf.nn.softmax(self.logits,name="qhat")
@@ -282,7 +278,7 @@ class meld:
                 self.cross_last = tf.add(tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(self.logits, qtrain_OH),name="cross_last"),self.reg)        
                 self.accuracy_last = tf.reduce_mean(tf.cast(tf.equal(self.A,B),tf.float32),name="accuracy_last")
                 self.rmse_last = tf.add(tf.sqrt(tf.reduce_mean(tf.square(tf.sub(self.qhat,self.qtrainPH))),name="rmse_last"),self.reg)
-                if self.n_out==3:
+                if (self.n_out%3)==0:
                     self.cost = self.rmse 
                 else:
                     self.cost = self.cross
@@ -303,7 +299,7 @@ class meld:
                 self.cross_last = tf.add(tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(self.logits_last, self.qtrain_last_OH),name="cross_last"),self.reg)
                 self.accuracy_last = tf.reduce_mean(tf.cast(tf.equal(self.AA,BB),tf.float32),name="accuracy_last")
                 self.rmse_last = tf.add(tf.sqrt(tf.reduce_mean(tf.square(tf.sub(self.qtrain_last,self.qhat_last))),name="rmse_last"),self.reg)
-                if self.n_out==3:
+                if (self.n_out%3)==0:
                     self.cost = self.rmse_last 
                 else:
                     self.cost = self.cross_last

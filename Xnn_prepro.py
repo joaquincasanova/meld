@@ -22,7 +22,7 @@ def aud_dataset(selection='all',pca=False,subsample=1,justdims=True,cnn=True,loc
     subject='sample'
     raw = mne.io.read_raw_fif(raw_fname, add_eeg_ref=False, preload=True,verbose=False)
 
-    raw.set_eeg_reference()  # set EEG average reference
+    #raw.set_eeg_reference()  # set EEG average reference
 
     baseline = (None, 0)  # means from the first instant to t = 0
 
@@ -125,13 +125,93 @@ def faces_dataset(subject_id,selection='all',pca=False,subsample=1,justdims=True
 def prepro(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=False):
     if cnn is True:
         if justdims is True:
+            meas_dims, m, p, n_steps, total_batch_size = cnn_justdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate)
+            return meas_dims, m, p, n_steps, total_batch_size
         else:
+            meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size = cnn_xjustdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate)
+            return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size
     elif cnn is 'fft':
         if justdims is True:
+            meas_dims, m, p, n_steps, total_batch_size = fftcnn_justdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate)
+            return meas_dims, m, p, n_steps, total_batch_size
         else:
+            meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size = fftcnn_xjustdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate)
+            return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size
     else:
         if justdims is True:
+            meas_dims, m, p, n_steps, total_batch_size = xcnn_justdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate)
+            return meas_dims, m, p, n_steps, total_batch_size            
         else:
+            meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size = xcnn_xjustdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate)
+            return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size
+
+def location(stc,subject,selection='all',locate=True):
+#    print stc, subject, selection, locate
+    if selection is 'all':
+        nd=stc[0].data.shape[0]
+        ns=stc[0].data.shape[1]
+        if locate is True:
+            loc=np.zeros((len(stc),ns,3))
+        elif locate>0:
+            loc=np.zeros((len(stc),ns,3*locate))
+            
+        vtx = stc[0].vertices
+        vtx_long = np.hstack((stc[0].vertices[0],stc[0].vertices[1]))
+        hem0 = np.size(vtx[0])
+        hem1 = np.size(vtx[1])
+        for s in range(0,len(stc)):
+            #max location (index)
+            if locate is True:
+                mxloc = np.argmax(stc[s].data,axis=0)#1xn_steps
+            elif locate>0:
+                mxloca = np.argsort(stc[s].data,axis=0)#kxn_steps
+                mxloc=mxloca[-1-k:-1]
+                #what hemisphere?
+            hemi = np.where(mxloc<nd/2,0,1)
+            mxvtx_long =vtx_long[mxloc]
+
+            #for m in range(0,ns):
+            #    mxvtx = vtx[hemi[m]][mxloc[m]-hemi[m]*hem0]#1xn_steps
+            if subject is 'sample':
+                loc[s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,subjects_dir='/home/jcasa/mne_data/MNE-sample-data/subjects',verbose=False)
+            else:
+                loc[s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,verbose=False)
+            qtrue_all = loc
+            p=loc.shape[2]
+            return qtrue_all, p
+    else:
+        if locate is True:
+            nd=stc[0].data.shape[0]
+            ns=stc[0].data.shape[1]
+            if locate is True:
+                loc=np.zeros((len(selection),ns,3))
+            elif locate>0:
+                loc=np.zeros((len(selection),ns,3*locate))
+
+            vtx = stc[0].vertices
+            vtx_long = np.hstack((stc[0].vertices[0],stc[0].vertices[1]))
+            hem0 = np.size(vtx[0])
+            hem1 = np.size(vtx[1])
+            for s in range(0,len(selection)):
+                #max location (index)
+                if locate is True:
+                    mxloc = np.argmax(stc[s].data,axis=0)#1xn_steps
+                elif locate>0:
+                    mxloca = np.argsort(stc[s].data,axis=0)#kxn_steps
+                    mxloc=mxloca[-1-k:-1]
+                #what hemisphere?
+                hemi = np.where(mxloc<nd/2,0,1)
+                mxvtx_long =vtx_long[mxloc]
+
+                #for m in range(0,ns):
+                #    mxvtx = vtx[hemi[m]][mxloc[m]-hemi[m]*hem0]#1xn_steps
+                if subject is 'sample':
+                    loc[s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,subjects_dir='/home/jcasa/mne_data/MNE-sample-data/subjects',verbose=False)
+                else:
+                    loc[s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,verbose=False)
+            qtrue_all = loc
+            p=loc.shape[2]
+            return qtrue_all, p
 
 def cnn_justdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=False):
     total_batch_size = len(stc)#number of events. we'll consider each event an example.
@@ -215,7 +295,7 @@ def cnn_xjustdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca
     else:
         dipole=np.array([stc[i]._data for i in selection]).transpose((1,2,0)) 
 
-    if locate==True:
+    if locate is not False:
         qtrue_all, p = location(stc,subject,selection=selection,locate=locate)
     else:
         #pxn_stepsxbatchsize
@@ -266,7 +346,7 @@ def xcnn_xjustdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pc
     else:
         dipole=np.array([stc[i]._data for i in selection]).transpose((1,2,0))
 
-    if locate==True:
+    if locate is not False:
         qtrue_all, p = location(stc,subject,selection=selection,locate=locate)
     else:
         #pxn_stepsxbatchsize
@@ -288,7 +368,7 @@ def fftcnn_justdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',p
     n_eeg = epochs_eeg.get_data().shape[1]
     n_meg = epochs_meg.get_data().shape[1]
 
-    meas_dims=n_eeg+n_meg
+    meas_dims=[n_steps, n_eeg+n_meg]
     print "Meas dims in: ", meas_dims
     m = meas_dims
     del stc, epochs, epochs_eeg, epochs_meg
@@ -296,7 +376,7 @@ def fftcnn_justdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',p
 
 def fftcnn_xjustdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=False):
     if selection is 'all':
-        total_batch_size = len(stc)#number of events. we'll consider each event an example.
+        total_batch_size = len(stc)#number of evens. we'll consider each event an example.
     else:
         total_batch_size = len(selection)#number of events. we'll consider each event an example.
 
@@ -317,7 +397,7 @@ def fftcnn_xjustdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',
 
     n_steps=meg_data.shape[2]
 
-    meas_dims=n_eeg+n_meg
+    meas_dims=[n_steps, n_eeg+n_meg]
     print "Meas dims in: ", meas_dims
     tf_meas = meas_class.meas(meg_data,meg_xyz, eeg_data,eeg_xyz, meas_dims, n_steps, total_batch_size)
     if pca is True:
@@ -328,7 +408,10 @@ def fftcnn_xjustdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',
         pass
 
     tf_meas.stack_reshape()
-    meas_img_all = tf_meas.meas_stack
+    ff=np.fft.fft(tf_meas.meas_stack,axis=1)
+    print ff.shape
+    meas_img_all = np.expand_dims(np.abs(ff)*np.abs(ff),-1)
+    print meas_img_all.shape
     m = tf_meas.m
 
     if selection is 'all':
@@ -336,7 +419,7 @@ def fftcnn_xjustdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',
     else:
         dipole=np.array([stc[i]._data for i in selection]).transpose((1,2,0))
 
-    if locate==True:
+    if locate is not False:
         qtrue_all, p = location(stc,subject,selection=selection,locate=locate)
     else:
         #pxn_stepsxbatchsize
@@ -344,73 +427,6 @@ def fftcnn_xjustdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',
         #bxnxp
     del stc, epochs, epochs_eeg, epochs_meg
     return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size 
-
-def location(stc,subject,selection='all',locate=True):
-    if selection is 'all':
-        nd=stc[0].data.shape[0]
-        ns=stc[0].data.shape[1]
-        if locate is True:
-            loc=np.zeros((len(stc),ns,3))
-        elif locate>0:
-            loc=np.zeros((len(stc),ns,3*locate))
-            
-        vtx = stc[0].vertices
-        vtx_long = np.hstack((stc[0].vertices[0],stc[0].vertices[1]))
-        hem0 = np.size(vtx[0])
-        hem1 = np.size(vtx[1])
-        for s in range(0,len(stc)):
-            #max location (index)
-            if locate is True:
-                mxloc = np.argmax(stc[s].data,axis=0)#1xn_steps
-            elif locate>0:
-                mxloca = np.argsort(stc[s].data,axis=0)#kxn_steps
-                mxloc=mxloca[-1-k:-1]
-                #what hemisphere?
-            hemi = np.where(mxloc<nd/2,0,1)
-            mxvtx_long =vtx_long[mxloc]
-
-            #for m in range(0,ns):
-            #    mxvtx = vtx[hemi[m]][mxloc[m]-hemi[m]*hem0]#1xn_steps
-            if subject is 'sample':
-                loc[s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,subjects_dir='/home/jcasa/mne_data/MNE-sample-data/subjects',verbose=False)
-            else:
-                loc[s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,verbose=False)
-            qtrue_all = loc
-            p=loc.shape[2]
-            return qtrue_all, p
-    else:
-        if locate is True:
-            nd=stc[0].data.shape[0]
-            ns=stc[0].data.shape[1]
-            if locate is True:
-                loc=np.zeros((len(selection),ns,3))
-            elif locate>0:
-                loc=np.zeros((len(selection),ns,3*locate))
-
-            vtx = stc[0].vertices
-            vtx_long = np.hstack((stc[0].vertices[0],stc[0].vertices[1]))
-            hem0 = np.size(vtx[0])
-            hem1 = np.size(vtx[1])
-            for s in range(0,len(selection)):
-                #max location (index)
-                if locate is True:
-                    mxloc = np.argmax(stc[s].data,axis=0)#1xn_steps
-                elif locate>0:
-                    mxloca = np.argsort(stc[s].data,axis=0)#kxn_steps
-                    mxloc=mxloca[-1-k:-1]
-                #what hemisphere?
-                hemi = np.where(mxloc<nd/2,0,1)
-                mxvtx_long =vtx_long[mxloc]
-
-                #for m in range(0,ns):
-                #    mxvtx = vtx[hemi[m]][mxloc[m]-hemi[m]*hem0]#1xn_steps
-                if subject is 'sample':
-                    loc[s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,subjects_dir='/home/jcasa/mne_data/MNE-sample-data/subjects',verbose=False)
-                else:
-                    loc[s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,verbose=False)
-            qtrue_all = loc
-            p=loc.shape[2]
-            return qtrue_all, p
 
 def ttv(total,test_frac,val_frac,batch_frac,rand_test=True):
 
