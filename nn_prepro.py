@@ -11,7 +11,7 @@ from mne.datasets import sample
 from mne.minimum_norm import (make_inverse_operator, apply_inverse,
                               write_inverse_operator, apply_inverse_epochs,
                               read_inverse_operator)
-def aud_dataset(selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=False):
+def aud_dataset(selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=False,fft=False):
     ###############################################################################
     # Setup for reading the raw data
     data_path = sample.data_path()
@@ -131,7 +131,7 @@ def prepro(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=False,
             else:
                 p = stc[0]._data.shape[0]
             n_steps = stc[0]._data.shape[1]
-            meas_dims=[32,32]
+            meas_dims=[11,11]
             m = meas_dims[0]*meas_dims[1]
             del stc, epochs, epochs_eeg, epochs_meg
             if locate is True:
@@ -160,7 +160,7 @@ def prepro(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=False,
 
             n_steps=meg_data.shape[2]
 
-            meas_dims=[32,32]
+            meas_dims=[11,11]
             print "Image grid dimensions: ", meas_dims
             tf_meas = meas_class.meas(meg_data,meg_xyz, eeg_data,eeg_xyz, meas_dims, n_steps, total_batch_size)
             if pca is True:

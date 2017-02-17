@@ -29,7 +29,7 @@ for cnn in [True]:
             print 'Subject: ',subject_id,' PCA: ',pca,' Random: ',rand_test, ' CNN: ',cnn, ' RNN: ',rnn
 
             fieldnames=['batches','learning rate','batch_size','per_batch','dropout','beta','k_conv','n_conv1','n_conv2','n_layer','n_lstm','n_steps','train step','cost']
-            fname = './data/subject_%s_32x32_pca_%s_rand_%s_cnn_%s_rnn_%s.csv' % (subject_id, pca, rand_test, cnn, rnn)
+            fname = './data/subject_%s_11x11_pca_%s_rand_%s_cnn_%s_rnn_%s.csv' % (subject_id, pca, rand_test, cnn, rnn)
 
             with open(fname,'a') as csvfile:
                 writer=csv.DictWriter(csvfile,fieldnames=fieldnames)
@@ -45,7 +45,7 @@ for cnn in [True]:
                     learning_rate = 0.005
                     dropout = 1.
                     beta = 0.
-                    k_conv = 5
+                    k_conv = 3
                     n_chan_in=2
                     k_pool=1
                     n_out=p
@@ -77,7 +77,7 @@ for cnn in [True]:
                     print "Val batch ",val
 
                     with tf.Session() as session:
-                        logdir = '/tmp/tensorflowlogs/sub_%s/32x32/pca_%s/rand_%s/cnn_%s/rnn_%s/k_conv_%s' % (subject_id,pca,rand_test,cnn,rnn,k_conv)
+                        logdir = '/tmp/tensorflowlogs/sub_%s/11x11/pca_%s/rand_%s/cnn_%s/rnn_%s' % (subject_id,pca,rand_test,cnn,rnn)
                         if tf.gfile.Exists(logdir):
                             tf.gfile.DeleteRecursively(logdir)
                         tf.gfile.MakeDirs(logdir)
@@ -148,13 +148,23 @@ for cnn in [True]:
 
                         plt.subplot(3, 1, 1)
                         plt.plot(xt, x, 'o')
+                        plt.xlim(-100,100)
+                        plt.ylim(-100,100)
+                        plt.title('X')
 
                         plt.subplot(3, 1, 2)
                         plt.plot(yt,y,'o')
+                        plt.xlim(-100,100)
+                        plt.ylim(-100,100)
+                        plt.title('Y')
 
                         plt.subplot(3, 1, 3)
                         plt.plot(zt,z,'o')
-
+                        plt.xlabel('True (mm)')
+                        plt.ylabel('Predicted (mm)')
+                        plt.xlim(-100,100)
+                        plt.ylim(-100,100)
+                        plt.title('Z')
                         plt.show()
                         writer.writerow({'batches':batches,'learning rate':learning_rate,'batch_size':batch_size,'per_batch':per_batch,'dropout':dropout,'beta':beta,'k_conv':k_conv,'n_conv1':n_conv1,'n_conv2':n_conv2,'n_layer':n_layer,'n_lstm':n_lstm,'n_steps':n_steps,'train step':-2,'cost':costt})
 
