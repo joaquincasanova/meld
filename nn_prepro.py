@@ -11,7 +11,7 @@ from mne.datasets import sample
 from mne.minimum_norm import (make_inverse_operator, apply_inverse,
                               write_inverse_operator, apply_inverse_epochs,
                               read_inverse_operator)
-def aud_dataset(selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=False,fft=False):
+def aud_dataset(selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=False):
     ###############################################################################
     # Setup for reading the raw data
     data_path = sample.data_path()

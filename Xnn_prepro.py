@@ -11,7 +11,7 @@ from mne.datasets import sample
 from mne.minimum_norm import (make_inverse_operator, apply_inverse,
                               write_inverse_operator, apply_inverse_epochs,
                               read_inverse_operator)
-def aud_dataset(selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=False):
+def aud_dataset(selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=True):
     ###############################################################################
     # Setup for reading the raw data
     data_path = sample.data_path()
@@ -85,7 +85,7 @@ def aud_dataset(selection='all',pca=False,subsample=1,justdims=True,cnn=True,loc
         meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size = prepro(stc, epochs, epochs_eeg,epochs_meg,subject,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate)
         return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size 
 
-def faces_dataset(subject_id,selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=False):
+def faces_dataset(subject_id,selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=True):
     study_path = '/home/jcasa/mne_data/openfmri'
     subjects_dir = os.path.join(study_path, 'subjects')
     meg_dir = os.path.join(study_path, 'MEG')
@@ -122,7 +122,7 @@ def faces_dataset(subject_id,selection='all',pca=False,subsample=1,justdims=True
         return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size 
 
         
-def prepro(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=False):
+def prepro(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=True):
     if cnn is True:
         if justdims is True:
             meas_dims, m, p, n_steps, total_batch_size = cnn_justdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate)
@@ -146,14 +146,12 @@ def prepro(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=False,
             return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size
 
 def location(stc,subject,selection='all',locate=True):
-#    print stc, subject, selection, locate
+    if locate is True: locate=1
+    print "Locate ",locate," dipoles"
     if selection is 'all':
         nd=stc[0].data.shape[0]
         ns=stc[0].data.shape[1]
-        if locate is True:
-            loc=np.zeros((len(stc),ns,3))
-        elif locate>0:
-            loc=np.zeros((len(stc),ns,3*locate))
+        loc=np.zeros((len(stc),ns,3*locate))
             
         vtx = stc[0].vertices
         vtx_long = np.hstack((stc[0].vertices[0],stc[0].vertices[1]))
@@ -161,59 +159,46 @@ def location(stc,subject,selection='all',locate=True):
         hem1 = np.size(vtx[1])
         for s in range(0,len(stc)):
             #max location (index)
-            if locate is True:
-                mxloc = np.argmax(stc[s].data,axis=0)#1xn_steps
-            elif locate>0:
-                mxloca = np.argsort(stc[s].data,axis=0)#kxn_steps
-                mxloc=mxloca[-1-k:-1]
-                #what hemisphere?
-            hemi = np.where(mxloc<nd/2,0,1)
-            mxvtx_long =vtx_long[mxloc]
-
-            #for m in range(0,ns):
-            #    mxvtx = vtx[hemi[m]][mxloc[m]-hemi[m]*hem0]#1xn_steps
+            mxloca = np.argsort(np.abs(stc[s].data),axis=0)
+            mxloc=mxloca[-1-locate:-1,:]
+            assert mxloc.shape[0]==locate and mxloc.shape[1]==ns
+            hemi = np.where(mxloc<nd/2,0,1).reshape([-1])
+            mxvtx_long =vtx_long[mxloc].reshape([-1])
             if subject is 'sample':
-                loc[s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,subjects_dir='/home/jcasa/mne_data/MNE-sample-data/subjects',verbose=False)
+                loc[s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,subjects_dir='/home/jcasa/mne_data/MNE-sample-data/subjects',verbose=False).reshape([-1,locate*3])
             else:
-                loc[s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,verbose=False)
-            qtrue_all = loc
-            p=loc.shape[2]
-            return qtrue_all, p
-    else:
-        if locate is True:
-            nd=stc[0].data.shape[0]
-            ns=stc[0].data.shape[1]
-            if locate is True:
-                loc=np.zeros((len(selection),ns,3))
-            elif locate>0:
-                loc=np.zeros((len(selection),ns,3*locate))
+                loc[s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,verbose=False).reshape([-1,locate*3])
+                
+        qtrue_all = loc
+        p=loc.shape[2]
+        return qtrue_all, p
+    else:        
+        nd=stc[0].data.shape[0]
+        ns=stc[0].data.shape[1]
+        loc=np.zeros((len(selection),ns,3*locate))
 
-            vtx = stc[0].vertices
-            vtx_long = np.hstack((stc[0].vertices[0],stc[0].vertices[1]))
-            hem0 = np.size(vtx[0])
-            hem1 = np.size(vtx[1])
-            for s in range(0,len(selection)):
-                #max location (index)
-                if locate is True:
-                    mxloc = np.argmax(stc[s].data,axis=0)#1xn_steps
-                elif locate>0:
-                    mxloca = np.argsort(stc[s].data,axis=0)#kxn_steps
-                    mxloc=mxloca[-1-k:-1]
-                #what hemisphere?
-                hemi = np.where(mxloc<nd/2,0,1)
-                mxvtx_long =vtx_long[mxloc]
+        vtx = stc[0].vertices
+        vtx_long = np.hstack((stc[0].vertices[0],stc[0].vertices[1]))
+        hem0 = np.size(vtx[0])
+        hem1 = np.size(vtx[1])
+        ind_s = 0
+        for s in selection:
+            #max location (index)
+            mxloca = np.argsort(np.abs(stc[s].data),axis=0)
+            mxloc=mxloca[-1-locate:-1,:]
+            assert mxloc.shape[0]==locate and mxloc.shape[1]==ns
+            hemi = np.where(mxloc<nd/2,0,1).reshape([-1])
+            mxvtx_long =vtx_long[mxloc].reshape([-1])
+            if subject is 'sample':
+                loc[ind_s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,subjects_dir='/home/jcasa/mne_data/MNE-sample-data/subjects',verbose=False).reshape([-1,locate*3])
+            else:
+                loc[ind_s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,verbose=False).reshape([-1,locate*3])
+            ind_s+=1
+        qtrue_all = loc
+        p=loc.shape[2]
+        return qtrue_all, p
 
-                #for m in range(0,ns):
-                #    mxvtx = vtx[hemi[m]][mxloc[m]-hemi[m]*hem0]#1xn_steps
-                if subject is 'sample':
-                    loc[s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,subjects_dir='/home/jcasa/mne_data/MNE-sample-data/subjects',verbose=False)
-                else:
-                    loc[s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,verbose=False)
-            qtrue_all = loc
-            p=loc.shape[2]
-            return qtrue_all, p
-
-def cnn_justdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=False):
+def cnn_justdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=True):
     total_batch_size = len(stc)#number of events. we'll consider each event an example.
     if locate is True:
         p=3
@@ -231,7 +216,7 @@ def cnn_justdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=
         p=3*locate
     return meas_dims, m, p, n_steps, total_batch_size
 
-def xcnn_justdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=False):
+def xcnn_justdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=True):
     total_batch_size = len(stc)#number of events. we'll consider each event an example.
     if locate is True:
         p=3
@@ -250,7 +235,7 @@ def xcnn_justdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca
     del stc, epochs, epochs_eeg, epochs_meg
     return meas_dims, m, p, n_steps, total_batch_size
 
-def cnn_xjustdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=False):
+def cnn_xjustdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=True):
     if selection is 'all':
         total_batch_size = len(stc)#number of events. we'll consider each event an example.
     else:                
@@ -304,7 +289,7 @@ def cnn_xjustdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca
     del stc, epochs, epochs_eeg, epochs_meg
     return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size 
 
-def xcnn_xjustdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=False):
+def xcnn_xjustdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=True):
     if selection is 'all':
         total_batch_size = len(stc)#number of events. we'll consider each event an example.
     else:
@@ -355,7 +340,7 @@ def xcnn_xjustdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pc
     del stc, epochs, epochs_eeg, epochs_meg
     return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size 
 
-def fftcnn_justdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=False):
+def fftcnn_justdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=True):
     total_batch_size = len(stc)#number of events. we'll consider each event an example.
     if locate is True:
         p=3
@@ -374,7 +359,7 @@ def fftcnn_justdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',p
     del stc, epochs, epochs_eeg, epochs_meg
     return meas_dims, m, p, n_steps, total_batch_size
 
-def fftcnn_xjustdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=False):
+def fftcnn_xjustdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=True):
     if selection is 'all':
         total_batch_size = len(stc)#number of evens. we'll consider each event an example.
     else:
@@ -409,9 +394,10 @@ def fftcnn_xjustdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',
 
     tf_meas.stack_reshape()
     ff=np.fft.fft(tf_meas.meas_stack,axis=1)
-    print ff.shape
+    #print ff.shape
     meas_img_all = np.expand_dims(np.abs(ff)*np.abs(ff),-1)
-    print meas_img_all.shape
+
+    #print meas_img_all.shape
     m = tf_meas.m
 
     if selection is 'all':
@@ -420,6 +406,7 @@ def fftcnn_xjustdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',
         dipole=np.array([stc[i]._data for i in selection]).transpose((1,2,0))
 
     if locate is not False:
+        print locate
         qtrue_all, p = location(stc,subject,selection=selection,locate=locate)
     else:
         #pxn_stepsxbatchsize

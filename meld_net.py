@@ -26,7 +26,7 @@ def variable_summaries(var, name):
       tf.summary.histogram('histogram/'+name, var)
       
 class meld:
-    def __init__(self,learning_rate,meas_dims,k_conv,k_pool,n_chan_in,n_conv1,n_conv2,n_out,n_steps=None,n_lstm=None,n_layer=None, cnn=True, rnn=True):
+    def __init__(self,learning_rate,meas_dims,k_conv,k_pool,n_chan_in,n_conv1,n_conv2,n_out,n_steps=None,n_lstm=None,n_layer=None, cnn=True, rnn=True, locate=True):
         self.learning_rate=learning_rate
         print "learning rate: ", self.learning_rate
         self.meas_dims=meas_dims
@@ -50,10 +50,15 @@ class meld:
         self.n_layer=n_layer
         print "n_layer: ", self.n_layer
         self.cnn=cnn
-        print self.cnn
+        print "CNN: ",self.cnn
         self.rnn=rnn
-        print self.rnn
-        if self.cnn is True:
+        print "RNN: ",self.rnn
+        if self.rnn is True and self.cnn is False:
+            self.rnn = False
+            print "RNN needs to be: ",self.rnn
+        self.locate=locate
+        print "Locate: ",self.locate
+        if self.cnn is not False:
             self.n_dense=int((self.meas_dims[0]-self.k_conv+1)/self.k_pool-self.k_conv+1)*int((self.meas_dims[1]-self.k_conv+1)/self.k_pool-self.k_conv+1)*self.n_conv2
         else:
             self.n_dense=self.meas_dims
@@ -89,14 +94,18 @@ class meld:
             variable_summaries(bd, 'bd')
             dense_out = tf.add(tf.matmul(dense, wd),bd)
             self.logits = tf.nn.dropout(dense_out, self.dropoutPH)
-            if (self.n_out%3)==0:
+            self.logits_last = tf.nn.dropout(dense_out, self.dropoutPH)
+            if self.locate is True:
                 self.qhat = self.logits
+                self.qhat_last = self.logits
             else:
                 self.qhat = tf.nn.softmax(self.logits,name="qhat")
+                self.qhat_last = self.logits
             self.reg=tf.multiply(self.betaPH,
                                  tf.add(tf.add(tf.nn.l2_loss(wd),tf.nn.l2_loss(wc1)),
                                         tf.nn.l2_loss(wc2)))
             self.A=tf.argmax(self.logits,1)
+            self.AA=tf.argmax(self.logits,1)
 
     def rnn_nn(self):
         with tf.name_scope('dense_layer'):
@@ -132,7 +141,7 @@ class meld:
                 
             self.logits_last=tf.add(tf.matmul(last,wrnn),brnn)#logits - bxp
 
-            if (self.n_out%3)==0:
+            if self.locate is True:
                 self.qhat = self.logits
                 self.qhat_last = self.logits_last                
             else:
@@ -197,7 +206,7 @@ class meld:
             self.logits = tf.add(tf.matmul(outs,wrnn),brnn)#self.logits - b*nxp
             self.logits_last=tf.add(tf.matmul(last,wrnn),brnn)#logits - bxp
 
-            if (self.n_out%3)==0:
+            if self.locate is True:
                 self.qhat = self.logits
                 self.qhat_last = self.logits_last                
             else:
@@ -225,7 +234,7 @@ class meld:
             variable_summaries(wo, 'wo')
             variable_summaries(bo, 'bo')
             self.logits = tf.add(tf.matmul(dense_out, wo),bo)
-            if (self.n_out%3)==0:
+            if self.locate is True:
                 self.qhat = self.logits
             else:
                 self.qhat = tf.nn.softmax(self.logits,name="qhat")
@@ -239,16 +248,18 @@ class meld:
         self.betaPH =  tf.placeholder(tf.float32, name="beta")
         if self.cnn is False:
             self.measPH=tf.placeholder(tf.float32,shape=(None, self.n_steps, self.meas_dims), name="meas")
+        elif self.cnn is 'fft':
+            self.measPH=tf.placeholder(tf.float32,shape=(None, self.meas_dims[0], self.meas_dims[1],self.n_chan_in), name="meas")
         else:
             self.measPH=tf.placeholder(tf.float32,shape=(None, self.n_steps, self.meas_dims[0], self.meas_dims[1],self.n_chan_in), name="meas")
 
         if self.rnn is True:
-            if self.cnn is True:
+            if self.cnn is not False:
                 self.cnn_rnn()
             else:
                 self.rnn_nn()
         else:            
-            if self.cnn is True:
+            if self.cnn is not False:
                 self.cnn_nn()
             else:
                 self.mlp()          
@@ -260,14 +271,14 @@ class meld:
             
     def initializer(self):
         self.init_step = tf.global_variables_initializer()
-        self.merged = tf.merge_all_summaries()
+        self.merged = tf.summary.merge_all()
     def cost(self): 
                     
         self.qtrainPH=tf.placeholder(tf.float32,shape=(None, self.n_steps, self.n_out), name="qtrain")
         self.qtrain_unflat = tf.reshape(self.qtrainPH,[-1,self.n_out])#b*nxp
 
         with tf.name_scope('cost'):
-            if self.rnn is False:                
+            if ((self.rnn is False) and (self.cnn is not 'fft')):                
                 B=tf.argmax(self.qtrain_unflat,1)
                 qtrain_OH = tf.one_hot(B,self.n_out,on_value=1,off_value=0,axis=-1)#need one-hot for CE calculation
         
@@ -275,31 +286,31 @@ class meld:
                 self.accuracy = tf.reduce_mean(tf.cast(tf.equal(self.A,B),tf.float32),name="accuracy")
                 self.rmse = tf.add(tf.sqrt(tf.reduce_mean(tf.square(tf.sub(self.qhat,self.qtrain_unflat))),name="rmse"),self.reg)
 
-                self.cross_last = tf.add(tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(self.logits, qtrain_OH),name="cross_last"),self.reg)        
-                self.accuracy_last = tf.reduce_mean(tf.cast(tf.equal(self.A,B),tf.float32),name="accuracy_last")
-                self.rmse_last = tf.add(tf.sqrt(tf.reduce_mean(tf.square(tf.sub(self.qhat,self.qtrainPH))),name="rmse_last"),self.reg)
-                if (self.n_out%3)==0:
+                #self.cross_last = tf.add(tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(self.logits, qtrain_OH),name="cross_last"),self.reg)        
+                #self.accuracy_last = tf.reduce_mean(tf.cast(tf.equal(self.A,B),tf.float32),name="accuracy_last")
+                #self.rmse_last = tf.add(tf.sqrt(tf.reduce_mean(tf.square(tf.sub(self.qhat,self.qtrainPH))),name="rmse_last"),self.reg)
+                if self.locate is True:
                     self.cost = self.rmse 
                 else:
                     self.cost = self.cross
 
-            else:
-                B=tf.argmax(self.qtrain_unflat,1)#b*nx1
-                qtrain_OH = tf.one_hot(B,self.n_out,on_value=1,off_value=0,axis=-1)#need one-hot for CE calculation
+            else:#yes rnn or cnn is fft
+                #B=tf.argmax(self.qtrain_unflat,1)#b*nx1
+                #qtrain_OH = tf.one_hot(B,self.n_out,on_value=1,off_value=0,axis=-1)#need one-hot for CE calculation
         
                 qtrain_tran = tf.transpose(self.qtrainPH,[1,0,2])#nxbxp
                 self.qtrain_last = tf.gather(qtrain_tran, int(qtrain_tran.get_shape()[0])-1)#bxp
                 BB=tf.argmax(self.qtrain_last,1)#bx1
                 self.qtrain_last_OH = tf.one_hot(BB,self.n_out,on_value=1,off_value=0,axis=-1)#need one-hot for CE calculation
                 
-                self.cross = tf.add(tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(self.logits, qtrain_OH),name="cross"),self.reg)
-                self.accuracy = tf.reduce_mean(tf.cast(tf.equal(self.A,B),tf.float32),name="accuracy")
-                self.rmse = tf.add(tf.sqrt(tf.reduce_mean(tf.square(tf.sub(self.qhat,self.qtrain_unflat))),name="rmse"),self.reg)
+                #self.cross = tf.add(tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(self.logits, qtrain_OH),name="cross"),self.reg)
+                #self.accuracy = tf.reduce_mean(tf.cast(tf.equal(self.A,B),tf.float32),name="accuracy")
+                #self.rmse = tf.add(tf.sqrt(tf.reduce_mean(tf.square(tf.sub(self.qhat,self.qtrain_unflat))),name="rmse"),self.reg)
                 
                 self.cross_last = tf.add(tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(self.logits_last, self.qtrain_last_OH),name="cross_last"),self.reg)
                 self.accuracy_last = tf.reduce_mean(tf.cast(tf.equal(self.AA,BB),tf.float32),name="accuracy_last")
                 self.rmse_last = tf.add(tf.sqrt(tf.reduce_mean(tf.square(tf.sub(self.qtrain_last,self.qhat_last))),name="rmse_last"),self.reg)
-                if (self.n_out%3)==0:
+                if self.locate is True:
                     self.cost = self.rmse_last 
                 else:
                     self.cost = self.cross_last

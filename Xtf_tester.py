@@ -11,7 +11,7 @@ import Xnn_prepro as nn_prepro
 pca=True
 subsample=1
 pca=True
-cnn=True
+cnn=False
 locate=3
 
 subject_id='aud'
