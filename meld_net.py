@@ -63,7 +63,7 @@ class meld:
         else:
             self.n_dense=self.meas_dims
         print "n_dense: ", self.n_dense
-
+        self.std_dense = 100./self.n_dense
     def cnn_nn(self):        
         # Store layers weight & bias
         with tf.name_scope('convolutional_layer_1'):
@@ -88,8 +88,8 @@ class meld:
 
         with tf.name_scope('dense_layer'):
             dense = tf.reshape(conv2, [-1, self.n_dense]) # Reshape conv1 output to fit dense layer input
-            wd = tf.Variable(tf.random_normal([self.n_dense, self.n_out]))
-            bd = tf.Variable(tf.random_normal([self.n_out]))
+            wd = tf.Variable(tf.random_normal([self.n_dense, self.n_out],stddev=self.std_dense))
+            bd = tf.Variable(tf.random_normal([self.n_out],stddev=self.std_dense))
             variable_summaries(wd, 'wd')
             variable_summaries(bd, 'bd')
             dense_out = tf.add(tf.matmul(dense, wd),bd)
@@ -285,30 +285,31 @@ class meld:
                 self.cross = tf.add(tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(self.logits, qtrain_OH),name="cross"),self.reg)
                 self.accuracy = tf.reduce_mean(tf.cast(tf.equal(self.A,B),tf.float32),name="accuracy")
                 self.rmse = tf.add(tf.sqrt(tf.reduce_mean(tf.square(tf.sub(self.qhat,self.qtrain_unflat))),name="rmse"),self.reg)
-
-                #self.cross_last = tf.add(tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(self.logits, qtrain_OH),name="cross_last"),self.reg)        
-                #self.accuracy_last = tf.reduce_mean(tf.cast(tf.equal(self.A,B),tf.float32),name="accuracy_last")
-                #self.rmse_last = tf.add(tf.sqrt(tf.reduce_mean(tf.square(tf.sub(self.qhat,self.qtrainPH))),name="rmse_last"),self.reg)
+                variable_summaries(self.accuracy, 'accuracy')
+                self.cross_last = tf.add(tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(self.logits, qtrain_OH),name="cross_last"),self.reg)        
+                self.accuracy_last = tf.reduce_mean(tf.cast(tf.equal(self.A,B),tf.float32),name="accuracy_last")
+                self.rmse_last = tf.add(tf.sqrt(tf.reduce_mean(tf.square(tf.sub(self.qhat,self.qtrainPH))),name="rmse_last"),self.reg)
                 if self.locate is not False:
                     self.cost = self.rmse 
                 else:
                     self.cost = self.cross
 
             else:#yes rnn or cnn is fft
-                #B=tf.argmax(self.qtrain_unflat,1)#b*nx1
-                #qtrain_OH = tf.one_hot(B,self.n_out,on_value=1,off_value=0,axis=-1)#need one-hot for CE calculation
+                B=tf.argmax(self.qtrain_unflat,1)#b*nx1
+                qtrain_OH = tf.one_hot(B,self.n_out,on_value=1,off_value=0,axis=-1)#need one-hot for CE calculation
         
                 qtrain_tran = tf.transpose(self.qtrainPH,[1,0,2])#nxbxp
                 self.qtrain_last = tf.gather(qtrain_tran, int(qtrain_tran.get_shape()[0])-1)#bxp
                 BB=tf.argmax(self.qtrain_last,1)#bx1
                 self.qtrain_last_OH = tf.one_hot(BB,self.n_out,on_value=1,off_value=0,axis=-1)#need one-hot for CE calculation
                 
-                #self.cross = tf.add(tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(self.logits, qtrain_OH),name="cross"),self.reg)
-                #self.accuracy = tf.reduce_mean(tf.cast(tf.equal(self.A,B),tf.float32),name="accuracy")
-                #self.rmse = tf.add(tf.sqrt(tf.reduce_mean(tf.square(tf.sub(self.qhat,self.qtrain_unflat))),name="rmse"),self.reg)
+                self.cross = tf.add(tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(self.logits, qtrain_OH),name="cross"),self.reg)
+                self.accuracy = tf.reduce_mean(tf.cast(tf.equal(self.A,B),tf.float32),name="accuracy")
+                self.rmse = tf.add(tf.sqrt(tf.reduce_mean(tf.square(tf.sub(self.qhat,self.qtrain_unflat))),name="rmse"),self.reg)
                 
                 self.cross_last = tf.add(tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(self.logits_last, self.qtrain_last_OH),name="cross_last"),self.reg)
                 self.accuracy_last = tf.reduce_mean(tf.cast(tf.equal(self.AA,BB),tf.float32),name="accuracy_last")
+                variable_summaries(self.accuracy_last, 'accuracy_last')
                 self.rmse_last = tf.add(tf.sqrt(tf.reduce_mean(tf.square(tf.sub(self.qtrain_last,self.qhat_last))),name="rmse_last"),self.reg)
                 if self.locate is not False:
                     self.cost = self.rmse_last 

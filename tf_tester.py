@@ -19,12 +19,12 @@ import matplotlib.pyplot as plt
 #meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size=nn_prepro.aud_dataset(pca=True, subsample=10)
 
 params_list = [[25,2,3,100,3,.2,.1,.1]]
-params_list = [[3,3,7,100,3,.2,.1,.1]]
+#params_list = [[3,3,7,100,3,.2,.1,.1]]
 pca = True
 rand_test = True
 subsample = 1
 locate = 1
-for cnn in [True]:
+for cnn in ['fft']:
     for rnn in [False]:
         for subject_id in ['aud']:
             print 'Subject: ',subject_id,' PCA: ',pca,' Random: ',rand_test, ' CNN: ',cnn, ' RNN: ',rnn, 'Locate: ',locate
