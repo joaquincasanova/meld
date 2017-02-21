@@ -5,7 +5,7 @@ import dipole_class_xyz
 import tensorflow as tf
 import meld_net
 import csv
-import Xnn_prepro as nn_prepro
+import nn_prepro
 import time
 import matplotlib.pyplot as plt
 
@@ -18,13 +18,14 @@ import matplotlib.pyplot as plt
 
 #meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size=nn_prepro.aud_dataset(pca=True, subsample=10)
 
-params_list = [[3,3,7,100,3,.2,.1,.1]]#,[25,2,3,100,3,.2,.1,.1]]
+params_list = [[25,2,3,100,3,.2,.1,.1]]
+params_list = [[3,3,7,100,3,.2,.1,.1]]
 pca = True
 rand_test = True
 subsample = 1
-locate = 5
+locate = 1
 for cnn in [True]:
-    for rnn in [True]:
+    for rnn in [False]:
         for subject_id in ['aud']:
             print 'Subject: ',subject_id,' PCA: ',pca,' Random: ',rand_test, ' CNN: ',cnn, ' RNN: ',rnn, 'Locate: ',locate
 
@@ -132,81 +133,85 @@ for cnn in [True]:
                         print("Model saved in file: %s" % save_path)
 
                         #test batch
-                        guess,true,costt = session.run([nn.qhat, nn.qtrain_unflat,nn.cost],feed_dict={nn.qtrainPH: qtrue_test, nn.measPH: meas_img_test, nn.dropoutPH: dropout, nn.betaPH: beta})
+                        guess,guess_last,true,true_last,costt = session.run([nn.qhat,nn.qhat_last, nn.qtrain_unflat,nn.qtrain_last,nn.cost],feed_dict={nn.qtrainPH: qtrue_test, nn.measPH: meas_img_test, nn.dropoutPH: dropout, nn.betaPH: beta})
                         print "Test Step: ", step, "Cost: ", costt
-                        if locate is True:            
-                            z = np.squeeze(guess[:,2])
-                            y = np.squeeze(guess[:,1])
-                            x = np.squeeze(guess[:,0])
-
-                            zt = np.squeeze(true[:,2])
-                            yt = np.squeeze(true[:,1])
-                            xt = np.squeeze(true[:,0])
-
-                            fig = plt.figure()
-                            ax = fig.gca(projection='3d')
-                            ax.plot(x, y, z, 'ob')
-                            ax.plot(xt, yt, zt, 'or')
-
-                            plt.show()
-
-                            plt.subplot(3, 1, 1)
-                            plt.plot(xt, x, 'o')
-                            plt.xlim(-100,100)
-                            plt.ylim(-100,100)
-                            plt.title('X')
-
-                            plt.subplot(3, 1, 2)
-                            plt.plot(yt,y,'o')
-                            plt.xlim(-100,100)
-                            plt.ylim(-100,100)
-                            plt.title('Y')
-
-                            plt.subplot(3, 1, 3)
-                            plt.plot(zt,z,'o')
-                            plt.xlabel('True (mm)')
-                            plt.ylabel('Predicted (mm)')
-                            plt.xlim(-100,100)
-                            plt.ylim(-100,100)
-                            plt.title('Z')
-                            plt.show()
-                        elif locate>0:
-                            for l in range(0,locate):
-                                z = np.squeeze(guess[:,2+l*3])
-                                y = np.squeeze(guess[:,1+l*3])
-                                x = np.squeeze(guess[:,0+l*3])
-
-                                zt = np.squeeze(true[:,2+l*3])
-                                yt = np.squeeze(true[:,1+l*3])
-                                xt = np.squeeze(true[:,0+l*3])
-
-                                fig = plt.figure()
-                                ax = fig.gca(projection='3d')
-                                ax.plot(x, y, z, 'ob')
-                                ax.plot(xt, yt, zt, 'or')
-                                plt.title('Number '+str(l))
-                                plt.show()
-
-                                plt.subplot(3, 1, 1)
-                                plt.plot(xt, x, 'o')
-                                plt.xlim(-100,100)
-                                plt.ylim(-100,100)
-                                plt.title('X of '+str(l))
-
-                                plt.subplot(3, 1, 2)
-                                plt.plot(yt,y,'o')
-                                plt.xlim(-100,100)
-                                plt.ylim(-100,100)
-                                plt.title('Y of '+str(l))
-
-                                plt.subplot(3, 1, 3)
-                                plt.plot(zt,z,'o')
-                                plt.xlabel('True (mm)')
-                                plt.ylabel('Predicted (mm)')
-                                plt.xlim(-100,100)
-                                plt.ylim(-100,100)
-                                plt.title('Z of '+str(l))
-                                plt.show()                            
                         writer.writerow({'batches':batches,'learning rate':learning_rate,'batch_size':batch_size,'per_batch':per_batch,'dropout':dropout,'beta':beta,'k_conv':k_conv,'n_conv1':n_conv1,'n_conv2':n_conv2,'n_layer':n_layer,'n_lstm':n_lstm,'n_steps':n_steps,'train step':-2,'cost':costt})
+
+                        if locate is True: locate=1
+                        if locate>0:
+                            if rnn is False:                     
+                                for l in range(0,locate):
+                                    z = np.squeeze(guess[:,2+l*3])
+                                    y = np.squeeze(guess[:,1+l*3])
+                                    x = np.squeeze(guess[:,0+l*3])
+
+                                    zt = np.squeeze(true[:,2+l*3])
+                                    yt = np.squeeze(true[:,1+l*3])
+                                    xt = np.squeeze(true[:,0+l*3])
+
+                                    fig = plt.figure()
+                                    ax = fig.gca(projection='3d')
+                                    ax.plot(x, y, z, 'ob')
+                                    ax.plot(xt, yt, zt, 'or')
+                                    plt.title('Number '+str(l))
+                                    plt.show()
+
+                                    plt.subplot(3, 1, 1)
+                                    plt.plot(xt, x, 'o')
+                                    plt.xlim(-100,100)
+                                    plt.ylim(-100,100)
+                                    plt.title('X of '+str(l))
+
+                                    plt.subplot(3, 1, 2)
+                                    plt.plot(yt,y,'o')
+                                    plt.xlim(-100,100)
+                                    plt.ylim(-100,100)
+                                    plt.title('Y of '+str(l))
+
+                                    plt.subplot(3, 1, 3)
+                                    plt.plot(zt,z,'o')
+                                    plt.xlabel('True (mm)')
+                                    plt.ylabel('Predicted (mm)')
+                                    plt.xlim(-100,100)
+                                    plt.ylim(-100,100)
+                                    plt.title('Z of '+str(l))
+                                    plt.show()                            
+                            else:                     
+                                for l in range(0,locate):
+                                    z = np.squeeze(guess_last[:,2+l*3])
+                                    y = np.squeeze(guess_last[:,1+l*3])
+                                    x = np.squeeze(guess_last[:,0+l*3])
+
+                                    zt = np.squeeze(true_last[:,2+l*3])
+                                    yt = np.squeeze(true_last[:,1+l*3])
+                                    xt = np.squeeze(true_last[:,0+l*3])
+
+                                    fig = plt.figure()
+                                    ax = fig.gca(projection='3d')
+                                    ax.plot(x, y, z, 'ob')
+                                    ax.plot(xt, yt, zt, 'or')
+                                    plt.title('Number '+str(l))
+                                    plt.show()
+
+                                    plt.subplot(3, 1, 1)
+                                    plt.plot(xt, x, 'o')
+                                    plt.xlim(-100,100)
+                                    plt.ylim(-100,100)
+                                    plt.title('X of '+str(l))
+
+                                    plt.subplot(3, 1, 2)
+                                    plt.plot(yt,y,'o')
+                                    plt.xlim(-100,100)
+                                    plt.ylim(-100,100)
+                                    plt.title('Y of '+str(l))
+
+                                    plt.subplot(3, 1, 3)
+                                    plt.plot(zt,z,'o')
+                                    plt.xlabel('True (mm)')
+                                    plt.ylabel('Predicted (mm)')
+                                    plt.xlim(-100,100)
+                                    plt.ylim(-100,100)
+                                    plt.title('Z of '+str(l))
+                                    plt.show()
 
             csvfile.close()

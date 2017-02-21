@@ -95,7 +95,7 @@ class meld:
             dense_out = tf.add(tf.matmul(dense, wd),bd)
             self.logits = tf.nn.dropout(dense_out, self.dropoutPH)
             self.logits_last = tf.nn.dropout(dense_out, self.dropoutPH)
-            if self.locate is True:
+            if self.locate is not False:
                 self.qhat = self.logits
                 self.qhat_last = self.logits
             else:
@@ -141,7 +141,7 @@ class meld:
                 
             self.logits_last=tf.add(tf.matmul(last,wrnn),brnn)#logits - bxp
 
-            if self.locate is True:
+            if self.locate is not False:
                 self.qhat = self.logits
                 self.qhat_last = self.logits_last                
             else:
@@ -206,7 +206,7 @@ class meld:
             self.logits = tf.add(tf.matmul(outs,wrnn),brnn)#self.logits - b*nxp
             self.logits_last=tf.add(tf.matmul(last,wrnn),brnn)#logits - bxp
 
-            if self.locate is True:
+            if self.locate is not False:
                 self.qhat = self.logits
                 self.qhat_last = self.logits_last                
             else:
@@ -234,7 +234,7 @@ class meld:
             variable_summaries(wo, 'wo')
             variable_summaries(bo, 'bo')
             self.logits = tf.add(tf.matmul(dense_out, wo),bo)
-            if self.locate is True:
+            if self.locate is not False:
                 self.qhat = self.logits
             else:
                 self.qhat = tf.nn.softmax(self.logits,name="qhat")
@@ -289,7 +289,7 @@ class meld:
                 #self.cross_last = tf.add(tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(self.logits, qtrain_OH),name="cross_last"),self.reg)        
                 #self.accuracy_last = tf.reduce_mean(tf.cast(tf.equal(self.A,B),tf.float32),name="accuracy_last")
                 #self.rmse_last = tf.add(tf.sqrt(tf.reduce_mean(tf.square(tf.sub(self.qhat,self.qtrainPH))),name="rmse_last"),self.reg)
-                if self.locate is True:
+                if self.locate is not False:
                     self.cost = self.rmse 
                 else:
                     self.cost = self.cross
@@ -310,7 +310,7 @@ class meld:
                 self.cross_last = tf.add(tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(self.logits_last, self.qtrain_last_OH),name="cross_last"),self.reg)
                 self.accuracy_last = tf.reduce_mean(tf.cast(tf.equal(self.AA,BB),tf.float32),name="accuracy_last")
                 self.rmse_last = tf.add(tf.sqrt(tf.reduce_mean(tf.square(tf.sub(self.qtrain_last,self.qhat_last))),name="rmse_last"),self.reg)
-                if self.locate is True:
+                if self.locate is not False:
                     self.cost = self.rmse_last 
                 else:
                     self.cost = self.cross_last

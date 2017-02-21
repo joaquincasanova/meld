@@ -9,11 +9,43 @@ def cart2sph(x,y,z):
     r = np.sqrt(x**2 + y**2 + z**2)
     return az, el, r
 
+def cart2sphMat(xyz):
+    assert xyz.shape[2]%3==0
+    batches = xyz.shape[0]
+    locate = int(xyz.shape[2]/3)
+    aer =  np.zeros(xyz.shape)
+    for b in range(0,batches):
+        for l in range(0,locate):
+            x=xyz[b,:,0+l*3]
+            y=xyz[b,:,1+l*3]
+            z=xyz[b,:,2+l*3]
+            az,el,r=cart2sph(x,y,z)
+            aer[b,:,0+l*3]=az
+            aer[b,:,1+l*3]=el
+            aer[b,:,2+l*3]=r
+    return aer
+
 def sph2cart(az,el,r):
     x = r * np.cos(el) * np.cos(az)
     y = r * np.cos(el) * np.sin(az)
     z = r * np.sin(el)
     return x, y, z
+
+def sph2cartMat(aer):
+    assert aer.shape[2]%3==0
+    batches = aer.shape[0]
+    locate = int(aer.shape[2]/3)
+    xyz =  np.zeros(aer.shape)
+    for b in range(0,batches):
+        for l in range(0,locate):
+            az=aer[b,:,0+l*3]
+            el=aer[b,:,1+l*3]
+            r=aer[b,:,2+l*3]
+            x,y,z=sph2cart(az,el,r)
+            xyz[b,:,0+l*3]=x
+            xyz[b,:,1+l*3]=y
+            xyz[b,:,2+l*3]=z
+    return xyz
 
 def vect_cart2sph( Ax,Ay,Az,az,el ):
     Aaz=np.ones(np.shape(Ax))
