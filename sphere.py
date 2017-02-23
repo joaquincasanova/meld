@@ -47,6 +47,21 @@ def sph2cartMat(aer):
             xyz[b,:,2+l*3]=z
     return xyz
 
+def sph2cartMatNB(aer):
+    assert aer.shape[1]%3==0
+    batches = aer.shape[0]
+    locate = int(aer.shape[1]/3)
+    xyz =  np.zeros(aer.shape)
+    for l in range(0,locate):
+        az=aer[:,0+l*3]
+        el=aer[:,1+l*3]
+        r=aer[:,2+l*3]
+        x,y,z=sph2cart(az,el,r)
+        xyz[:,0+l*3]=x
+        xyz[:,1+l*3]=y
+        xyz[:,2+l*3]=z
+    return xyz
+
 def vect_cart2sph( Ax,Ay,Az,az,el ):
     Aaz=np.ones(np.shape(Ax))
     Ael=np.ones(np.shape(Ax))
