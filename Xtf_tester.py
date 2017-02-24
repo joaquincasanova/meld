@@ -47,17 +47,17 @@ learning_rate = 0.005
 dropout = 1.
 beta = 0.
 
-for locate in [True]:
+for locate in [False]:
     subsample = 1
     if locate  is False:
         subsample=20
-    for cnn in ['fft',True,False]:
+    for cnn in [True,False,'fft']:
         if cnn is 'fft':
             params_list = [[25,2,3,100,3,.2,.2,.2]]
         else:
             params_list = [[3,3,7,100,3,.2,.2,.2]]
 
-        for rnn in [False]:
+        for rnn in [True]:
             for subject_id in ['aud']:
                 if subject_id is 'aud':
                     treats=['left/auditory', 'right/auditory', 'left/visual', 'right/visual']
