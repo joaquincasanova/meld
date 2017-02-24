@@ -47,17 +47,17 @@ learning_rate = 0.005
 dropout = 1.
 beta = 0.
 
-for locate in [True,5]:
+for locate in [True]:
     subsample = 1
     if locate  is False:
         subsample=20
-    for cnn in [True,False]:
+    for cnn in ['fft',True,False]:
         if cnn is 'fft':
             params_list = [[25,2,3,100,3,.2,.2,.2]]
         else:
             params_list = [[3,3,7,100,3,.2,.2,.2]]
 
-        for rnn in [True]:
+        for rnn in [False]:
             for subject_id in ['aud']:
                 if subject_id is 'aud':
                     treats=['left/auditory', 'right/auditory', 'left/visual', 'right/visual']
@@ -87,21 +87,10 @@ for locate in [True,5]:
                             else:
                                 n_chan_in=2
 
-                            k_pool=1
-                            n_out=p
 
                             test, val, batch_list, batches = nn_prepro.ttv(total_batch_size,test_frac,val_frac,batch_frac,rand_test=rand_test)
 
-                            print "Meas: ", m, " Out: ",p, " Steps: ",n_steps
-
                             per_batch = int(5000/batches)
-                                
-                            nn=meld_net.meld(learning_rate,meas_dims,k_conv,k_pool,n_chan_in,n_conv1,n_conv2,n_out,n_steps,n_lstm,n_layer,cnn=cnn,rnn=rnn,locate=locate)
-                            tf.reset_default_graph()
-                            nn.network()
-                            nn.cost()
-                            nn.trainer()
-                            nn.initializer()     
                             if subject_id is 'aud':
                                 meas_img_test, qtrue_test, meas_dims, m, p, n_steps, test_size = nn_prepro.aud_dataset(selection=test,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat)
                             else:
@@ -115,6 +104,18 @@ for locate in [True,5]:
                                 meas_img_val, qtrue_val, meas_dims, m, p, n_steps, val_size = nn_prepro.faces_dataset(subject_id,selection=val,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat)
                             #pick a val batch
                             print "Val batch ",val
+
+                            n_out=p
+                            k_pool=1
+
+                            print "Meas: ", m, " Out: ",p, " Steps: ",n_steps
+
+                            nn=meld_net.meld(learning_rate,meas_dims,k_conv,k_pool,n_chan_in,n_conv1,n_conv2,n_out,n_steps,n_lstm,n_layer,cnn=cnn,rnn=rnn,locate=locate)
+                            tf.reset_default_graph()
+                            nn.network()
+                            nn.cost()
+                            nn.trainer()
+                            nn.initializer()     
 
                             with tf.Session() as session:
                                 logdir = '/tmp/tensorflowlogs/XYZTsub_%s/11x11/pca_%s/rand_%s/cnn_%s/rnn_%s/locate_%s/treat_%s/' % (subject_id,pca,rand_test,cnn,rnn,locate,lab_treat)
