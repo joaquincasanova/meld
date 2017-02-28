@@ -47,25 +47,29 @@ learning_rate = 0.005
 dropout = 1.
 beta = 0.
 
-for locate in [False]:
+for locate in [True]:
     subsample = 1
     if locate  is False:
         subsample=20
-    for cnn in [True,False,'fft']:
+    for cnn in ['fft']:
         if cnn is 'fft':
             params_list = [[25,2,3,100,3,.2,.2,.2]]
         else:
             params_list = [[3,3,7,100,3,.2,.2,.2]]
 
-        for rnn in [True]:
+        for rnn in [False]:
             for subject_id in ['aud']:
                 if subject_id is 'aud':
-                    treats=['left/auditory', 'right/auditory', 'left/visual', 'right/visual']
+                    treats=[None,'left/auditory', 'right/auditory', 'left/visual', 'right/visual']
                 else:
                     treats=['face/famous','scrambled','face/unfamiliar']
 
                 for treat in treats:
-                    lab_treat=treat.replace("/","_")
+                    if treat is not None:
+                        lab_treat=treat.replace("/","_")
+                    else:
+                        lab_treat='None'
+                        
                     print 'Subject: ',subject_id,' PCA: ',pca,' Random: ',rand_test, ' CNN: ',cnn, ' RNN: ',rnn, 'Locate: ',locate, 'Treat: ',lab_treat
 
                     fieldnames=['batches','learning rate','batch_size','per_batch','dropout','beta','k_conv','n_conv1','n_conv2','n_layer','n_lstm','n_steps','train step','cost']
@@ -118,7 +122,7 @@ for locate in [False]:
                             nn.initializer()     
 
                             with tf.Session() as session:
-                                logdir = '/tmp/tensorflowlogs/XYZTsub_%s/11x11/pca_%s/rand_%s/cnn_%s/rnn_%s/locate_%s/treat_%s/' % (subject_id,pca,rand_test,cnn,rnn,locate,lab_treat)
+                                logdir = '/tmp/tensorflowlogs/XYZTsub_%s/11x11/pca_%s/rand_%s/cnn_time_%s/rnn_%s/locate_%s/treat_%s/' % (subject_id,pca,rand_test,cnn,rnn,locate,lab_treat)
                                 if tf.gfile.Exists(logdir):
                                     tf.gfile.DeleteRecursively(logdir)
                                 tf.gfile.MakeDirs(logdir)

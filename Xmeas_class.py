@@ -115,15 +115,32 @@ class meas:
         self.EL0=[el0,el1]
         self.R0=[r0,r1]
 
-    def pca(self):
-        for [channel,m] in [[0,self.m0],[1,self.m1]]:
-            if self.batch_size*self.n_steps>m:
-                mPCA=PCA(self.meas_in[channel].T)
-                self.meas_in[channel]=mPCA.Y.T
-            else:
-                mPCA=PCA(self.meas_in[channel])
-                self.meas_in[channel]=mPCA.Y
-
+    def pca(self, Wt=None):
+        if Wt is None:
+            Wt = [np.zeros((self.m0,self.m0)),np.zeros((self.m1,self.m1))]
+            for [channel,m] in [[0,self.m0],[1,self.m1]]:
+                if self.batch_size*self.n_steps>m:
+                    mPCA=PCA(self.meas_in[channel].T)
+                    self.meas_in[channel]=mPCA.Y.T
+                
+                else:
+                    mPCA=PCA(self.meas_in[channel])
+                    self.meas_in[channel]=mPCA.Y
+                print 'Wt shape: ',mPCA.Wt.shape
+                Wt[channel]=mPCA.Wt
+        else:
+            for [channel,m] in [[0,self.m0],[1,self.m1]]:
+                if self.batch_size*self.n_steps>m:
+                    mPCA=PCA(self.meas_in[channel].T)
+                    mPCA.Wt=Wt[channel]
+                    self.meas_in[channel]=mPCA.Y.T
+                
+                else:
+                    mPCA=PCA(self.meas_in[channel])
+                    mPCA.Wt=Wt[channel]
+                    self.meas_in[channel]=mPCA.Y
+                print 'Wt shape: ',mPCA.Wt.shape
+        return Wt
     def scale(self):
         for channel in [0,1]:
             self.meas_in[channel]=np.nan_to_num((self.meas_in[channel]-np.amin(self.meas_in[channel],axis=0))/(np.amax(self.meas_in[channel],axis=0)-np.amin(self.meas_in[channel],axis=0)))

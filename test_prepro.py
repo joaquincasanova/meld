@@ -29,7 +29,7 @@ def pred_obs(guess,locate,name,num,nummax,ax=None,fig=None):
     if num is nummax-1:
         legend = plt.legend()
         plt.title('Location')
-        plt.savefig('facestreatmentsXYZT5.png')
+        #plt.savefig('facestreatmentsXYZT5.png')
         plt.show()
         
     print num
@@ -38,10 +38,10 @@ def pred_obs(guess,locate,name,num,nummax,ax=None,fig=None):
 pca=True
 subsample=1
 pca=True
-cnn=False
-locate=5
+cnn=True
+locate=1
 
-subject_id=7
+subject_id='aud'
 
 if subject_id is 'aud':
     treats=['left/auditory', 'right/auditory', 'left/visual', 'right/visual']

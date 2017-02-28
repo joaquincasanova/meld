@@ -21,3 +21,34 @@ plt.axes().set_aspect('equal', 'datalim')
 plt.axes().set_aspect('equal', 'datalim')
         plt.title('Z of '+str(l))
         plt.show()                            
+
+                #r = self.qtrain_unflat[:,0]
+                #rhat = self.qhat[:,0] 
+                #th = self.qtrain_unflat[:,1]
+                #thhat = self.qhat[:,1]
+                #ph = self.qtrain_unflat[:,2]
+                #phhat = self.qhat[:,2]
+                #x = self.qtrain_unflat[:,0]
+                #xhat = self.qhat[:,0] 
+                #y = self.qtrain_unflat[:,1]
+                #xhat = self.qhat[:,1]
+                #z = self.qtrain_unflat[:,2]
+                #xhat = self.qhat[:,2]
+                
+                #self.rmse = tf.add(tf.sqrt(tf.reduce_mean(tf.square(tf.sub(x,xhat))+tf.square(tf.sub(x,xhat))+tf.square(tf.sub(x,xhat))),name="rmse"),self.reg)
+
+                #r = self.qtrain_last[:,0]
+                #rhat = self.qhat_last[:,0] 
+                #th = self.qtrain_last[:,1]
+                #thhat = self.qhat_last[:,1]
+                #ph = self.qtrain_last[:,2]
+                #phhat = self.qhat_last[:,2]
+
+                #x = self.qtrain_last[:,0]
+                #xhat = self.qhat_last[:,0] 
+                #y = self.qtrain_last[:,1]
+                #yhat = self.qhat_last[:,1]
+                #z = self.qtrain_last[:,2]
+                #zhat = self.qhat_last[:,2]
+                
+                #self.rmse_last = tf.add(tf.sqrt(tf.reduce_mean(tf.square(tf.sub(x,xhat))+tf.square(tf.sub(x,xhat))+tf.square(tf.sub(x,xhat))),name="rmse"),self.reg)

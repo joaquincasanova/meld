@@ -44,7 +44,7 @@ learning_rate = 0.005
 dropout = 1.
 beta = 0.
 
-for locate in [False]:
+for locate in [True]:
     subsample = 1
     if locate  is False:
         subsample=20
@@ -57,12 +57,15 @@ for locate in [False]:
         for rnn in [False,True]:
             for subject_id in ['aud']:
                 if subject_id is 'aud':
-                    treats=['left/auditory', 'right/auditory', 'left/visual', 'right/visual']
+                    treats=[None]#'left/auditory', 'right/auditory', 'left/visual', 'right/visual']
                 else:
-                    treats=['face/famous','scrambled','face/unfamiliar']
+                    treats=[None]#'face/famous','scrambled','face/unfamiliar']
 
                 for treat in treats:
-                    lab_treat=treat.replace("/","_")
+                    if treat is not None:
+                        lab_treat=treat.replace("/","_")
+                    else:
+                        lab_treat='None'
                     print 'Subject: ',subject_id,' PCA: ',pca,' Random: ',rand_test, ' CNN: ',cnn, ' RNN: ',rnn, 'Locate: ',locate, 'Treat: ',lab_treat
 
                     fieldnames=['batches','learning rate','batch_size','per_batch','dropout','beta','k_conv','n_conv1','n_conv2','n_layer','n_lstm','n_steps','train step','cost']

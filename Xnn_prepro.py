@@ -332,7 +332,7 @@ def cnn_xjustdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca
     print "Image grid dimensions: ", meas_dims
     tf_meas = meas_class.meas(meg_data,meg_xyz, eeg_data,eeg_xyz, meas_dims, n_steps, total_batch_size)
     if pca is True:
-        tf_meas.pca()
+        Wt=tf_meas.pca()
     elif pca is False:
         tf_meas.scale()
     else:
@@ -479,9 +479,13 @@ def fftcnn_xjustdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',
         pass
 
     tf_meas.stack_reshape()
-    ff=np.fft.fft(tf_meas.meas_stack,axis=1)
+    #ff=np.fft.fft(tf_meas.meas_stack,axis=1)
+    ff=tf_meas.meas_stack
+    
     #print ff.shape
-    meas_img_all = np.expand_dims(np.abs(ff)*np.abs(ff),-1)
+    #meas_img_all = np.expand_dims(np.abs(ff)*np.abs(ff),-1)
+    meas_img_all = np.expand_dims(ff,-1)
+
 
     #print meas_img_all.shape
     m = tf_meas.m
