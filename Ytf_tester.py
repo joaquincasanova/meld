@@ -3,7 +3,7 @@ from numpy import matlib
 import sphere
 import dipole_class_xyz
 import tensorflow as tf
-import meld_net#Ymeld_net as meld_net
+import Ymeld_net as meld_net
 import csv
 import Ynn_prepro as nn_prepro
 import time
@@ -19,9 +19,9 @@ def pred_obs(guess,true,locate,name):
         #guess=sphere.sph2cartMatNB(guess)
         #true=sphere.sph2cartMatNB(true)
         
-        z = np.squeeze(guess[:,2+l*3])
-        y = np.squeeze(guess[:,1+l*3])
-        x = np.squeeze(guess[:,0+l*3])
+        z = np.squeeze(guess[:,2])
+        y = np.squeeze(guess[:,1])
+        x = np.squeeze(guess[:,0])
 
         zt = np.squeeze(true[:,2+l*3])
         yt = np.squeeze(true[:,1+l*3])
@@ -47,7 +47,7 @@ learning_rate = 0.005
 dropout = 1.
 beta = 0.
 
-for locate in [True]:
+for locate in [95,10,1]:
     subsample = 1
     if locate  is False:
         subsample=20
@@ -55,7 +55,7 @@ for locate in [True]:
         if cnn is 'fft':
             params_list = [[25,2,3,100,3,.2,.2,.2]]
         else:
-            params_list = [[3,3,7,100,3,.2,.2,.2]]
+            params_list = [[3,3,5,10,3,.2,.2,.2]]
 
         for rnn in [False,True]:
             for subject_id in ['aud']:
@@ -63,7 +63,7 @@ for locate in [True]:
                     treats=['left/auditory', 'right/auditory', 'left/visual', 'right/visual',None]
                 else:
                     treats=['face/famous','scrambled','face/unfamiliar']
-
+                treats=[None]
                 for treat in treats:
                     if treat is not None:
                         lab_treat=treat.replace("/","_")
@@ -124,7 +124,7 @@ for locate in [True]:
                             nn.initializer()     
 
                             with tf.Session() as session:
-                                logdir = '/tmp/tensorflowlogs/XYZTsub_%s/11x11/pca_all_%s/rand_%s/cnn_%s/rnn_%s/locate_%s/treat_%s/' % (subject_id,pca,rand_test,cnn,rnn,locate,lab_treat)
+                                logdir = '/tmp/tensorflowlogs/XYZTsub_%s/11x11/pca_all_%s/rand_%s/cnn_%s/rnn_%s/locate_knn_%s/treat_%s/' % (subject_id,pca,rand_test,cnn,rnn,locate,lab_treat)
                                 if tf.gfile.Exists(logdir):
                                     tf.gfile.DeleteRecursively(logdir)
                                 tf.gfile.MakeDirs(logdir)
@@ -159,8 +159,8 @@ for locate in [True]:
                                         if step % plot_step==0:
 
                                             if locate is True: locate=1
-                                            if locate>0:
-                                                pred_obs(guess, true, locate,name+str(step))
+                                            #if locate>0:
+                                                #pred_obs(guess, true, locate,name+str(step))
                                                 
 
                                         writer.writerow({'batches':batches,'learning rate':learning_rate,'batch_size':batch_size,'per_batch':per_batch,'dropout':dropout,'beta':beta,'k_conv':k_conv,'n_conv1':n_conv1,'n_conv2':n_conv2,'n_layer':n_layer,'n_steps':n_steps,'n_lstm':n_lstm,'train step':step,'cost':cost})
@@ -180,8 +180,8 @@ for locate in [True]:
                                         step+=1
 
 
-                                save_path = nn.saver.save(session, "./data/model.ckpt")
-                                print("Model saved in file: %s" % save_path)
+                                #save_path = nn.saver.save(session, "./data/model.ckpt")
+                                #print("Model saved in file: %s" % save_path)
 
                                 #test batch
                                 
@@ -193,7 +193,7 @@ for locate in [True]:
                                 writer.writerow({'batches':batches,'learning rate':learning_rate,'batch_size':batch_size,'per_batch':per_batch,'dropout':dropout,'beta':beta,'k_conv':k_conv,'n_conv1':n_conv1,'n_conv2':n_conv2,'n_layer':n_layer,'n_lstm':n_lstm,'n_steps':n_steps,'train step':-2,'cost':costt})
 
                                 if locate is True: locate=1
-                                if locate>0:
-                                    pred_obs(guess, true, locate, name+str(-2))
+                                #if locate>0:
+                                    #pred_obs(guess, true, locate, name+str(-2))
                                     
                     csvfile.close()

@@ -39,7 +39,7 @@ pca=True
 subsample=1
 pca=True
 cnn=True
-locate=1
+locate=95
 
 subject_id='aud'
 
