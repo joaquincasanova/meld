@@ -118,7 +118,7 @@ class meas:
         print "Interpolate ..."
         f=np.zeros((self.m,self.n_steps*self.batch_size))
         g=np.zeros((self.m,self.n_steps*self.batch_size))
-        self.meas_out=[f,g]
+        self.mes_out=[f,g]
         
         for channel in [0,1]:
             print "Channel ", channel

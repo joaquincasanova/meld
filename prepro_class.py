@@ -425,7 +425,7 @@ class prepro:
         tf_meas.reshape()
         #for b in range(0,n_steps*total_batch_size):
         #    tf_meas.plot(b)
-        meas_img_all = tf_meas.meas_img
+        self.meas_img_all = tf_meas.meas_img
         self.m =tf_meas.m
 
         if self.selection is 'all':
@@ -483,7 +483,7 @@ class prepro:
             pass
 
         tf_meas.stack_reshape()
-        meas_img_all = tf_meas.meas_stack
+        self.meas_img_all = tf_meas.meas_stack
         self.m =tf_meas.m
 
         if self.selection is 'all':
@@ -564,7 +564,7 @@ class prepro:
 
         #print ff.shape
         #meas_img_all = np.expand_dims(np.abs(ff)*np.abs(ff),-1)
-        meas_img_all = np.expand_dims(ff,-1)
+        self.meas_img_all = np.expand_dims(ff,-1)
 
 
         #print meas_img_all.shape

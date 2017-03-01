@@ -350,7 +350,7 @@ class meld:
                 self.accuracy_last = tf.reduce_mean(tf.cast(tf.equal(self.AA,BB),tf.float32),name="accuracy_last")
                 
                 if self.locate is not False:
-                    with tf.name_scope('rep outputs'):
+                    with tf.name_scope('rep_outputs'):
                         qhat_rep = tf.matmul(self.qhat_last,self.W0)#bx3x3x3l
                         SE = tf.matmul(tf.square(tf.sub(qhat_rep,self.qtrain_last)),self.W1)#bx3lx3lxl
                         SEnb = tf.reduce_min(SE,axis=1)#b
