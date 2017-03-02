@@ -5,9 +5,8 @@ import sphere
 import dipole_class_xyz
 import tensorflow as tf
 import csv
-import Xmeas_class as meas_class
+import meas_class
 import mne
-import sphere
 from mne.datasets import sample
 from mne.minimum_norm import (make_inverse_operator, apply_inverse,
                               write_inverse_operator, apply_inverse_epochs,
@@ -97,13 +96,13 @@ def Wt_calc(stc,epochs_eeg,epochs_meg):
 
     tf_meas = meas_class.meas(meg_data,meg_xyz, eeg_data,eeg_xyz, meas_dims, n_steps, total_batch_size)
 
-    self.Wt=tf_meas.pca()
+    Wt=tf_meas.pca()
 
     return Wt
 
 
 class prepro:
-    def __init__(self,selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=True,treat=None,rnn=True,self.Wt=None):
+    def __init__(self,selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=True,treat=None,rnn=True,Wt=None):
         self.selection=selection
         self.pca=pca
         self.subsample=subsample
@@ -122,7 +121,7 @@ class prepro:
         event_fname = data_path + '/MEG/sample/sample_audvis_filt-0-40_raw-eve.fif'
         tmin = -0.2  # start of each epoch (200ms before the trigger)
         tmax = 0.5  # end of each epoch (500ms after the trigger)
-        subject='sample'
+        self.subject='sample'
         raw = mne.io.read_raw_fif(raw_fname, add_eeg_ref=False, preload=True,verbose=False)
 
         #raw.set_eeg_reference()  # set EEG average reference
@@ -203,15 +202,15 @@ class prepro:
         spacing = 'oct5'
         mindist = 5
 
-        subject = "sub%03d" % subject_id
-        print("processing %s" % subject)
+        self.subject = "sub%03d" % subject_id
+        print("processing %s" % self.subject)
 
-        invname = '%s-meg-%s-inv.fif' % (subject,spacing)
-        invpath = os.path.join(os.path.join(meg_dir,subject),invname) 
-        fwdname = '%s-meg-%s-fwd.fif' % (subject,spacing)
-        fwdpath = os.path.join(os.path.join(meg_dir,subject),fwdname) 
-        eponame = '%s-epo.fif' % (subject) 
-        epopath = os.path.join(os.path.join(meg_dir,subject),eponame)
+        invname = '%s-meg-%s-inv.fif' % (self.subject,spacing)
+        invpath = os.path.join(os.path.join(meg_dir,self.subject),invname) 
+        fwdname = '%s-meg-%s-fwd.fif' % (self.subject,spacing)
+        fwdpath = os.path.join(os.path.join(meg_dir,self.subject),fwdname) 
+        eponame = '%s-epo.fif' % (self.subject) 
+        epopath = os.path.join(os.path.join(meg_dir,self.subject),eponame)
         epochs = mne.read_epochs(epopath,verbose=False)
 
         if self.treat is not None:
@@ -233,7 +232,7 @@ class prepro:
             self.stc = apply_inverse_epochs(epochs, inv, lambda2,
                                        method=method, pick_ori=None,verbose=False)
 
-        if Wt is None:
+        if self.Wt is None:
             print 'Precalculate PCA weights:'
             #weight PCA matrix. Uses 'treat' - so to apply across all treatments, use treat=None
             self.Wt=Wt_calc(self.stc,self.epochs_eeg,self.epochs_meg)
@@ -258,7 +257,7 @@ class prepro:
                 self.xcnn_xjustdims()
 
     def location(self):
-        if self.self.locate is True: self.locate=1
+        if self.locate is True: self.locate=1
         print "Locate ",self.locate," dipoles"
         if self.selection is 'all':
             nd=self.stc[0].data.shape[0]
@@ -276,10 +275,10 @@ class prepro:
                 assert mxloc.shape[0]==self.locate and mxloc.shape[1]==ns
                 hemi = np.where(mxloc<nd/2,0,1).reshape([-1])
                 mxvtx_long =vtx_long[mxloc].reshape([-1])
-                if subject is 'sample':
-                    loc[s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,subjects_dir='/home/jcasa/mne_data/MNE-sample-data/subjects',verbose=False).reshape([-1,self.locate*3])
+                if self.subject is 'sample':
+                    loc[s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,self.subject,subjects_dir='/home/jcasa/mne_data/MNE-sample-data/subjects',verbose=False).reshape([-1,self.locate*3])
                 else:
-                    loc[s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,verbose=False).reshape([-1,self.locate*3])
+                    loc[s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,self.subject,verbose=False).reshape([-1,self.locate*3])
 
             self.qtrue_all = loc
             self.p=loc.shape[2]
@@ -300,10 +299,10 @@ class prepro:
                 assert mxloc.shape[0]==self.locate and mxloc.shape[1]==ns
                 hemi = np.where(mxloc<nd/2,0,1).reshape([-1])
                 mxvtx_long =vtx_long[mxloc].reshape([-1])
-                if subject is 'sample':
-                    loc[ind_s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,subjects_dir='/home/jcasa/mne_data/MNE-sample-data/subjects',verbose=False).reshape([-1,self.locate*3])
+                if self.subject is 'sample':
+                    loc[ind_s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,self.subject,subjects_dir='/home/jcasa/mne_data/MNE-sample-data/subjects',verbose=False).reshape([-1,self.locate*3])
                 else:
-                    loc[ind_s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,verbose=False).reshape([-1,self.locate*3])
+                    loc[ind_s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,self.subject,verbose=False).reshape([-1,self.locate*3])
                 ind_s+=1
             self.qtrue_all = loc
             self.p=loc.shape[2]
@@ -326,10 +325,10 @@ class prepro:
                 I,J=i[-1-self.locate:-1],j[-1-self.locate:-1]#I is neuron index,J is temporal index
                 hemi = np.where(I<nd/2,0,1).reshape([-1])
                 mxvtx_long =vtx_long[I].reshape([-1])
-                if subject is 'sample':
-                    loc[s,-1,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,subjects_dir='/home/jcasa/mne_data/MNE-sample-data/subjects',verbose=False).reshape([-1,self.locate*3])
+                if self.subject is 'sample':
+                    loc[s,-1,:] = mne.vertex_to_mni(mxvtx_long,hemi,self.subject,subjects_dir='/home/jcasa/mne_data/MNE-sample-data/subjects',verbose=False).reshape([-1,self.locate*3])
                 else:
-                    loc[s,-1,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,verbose=False).reshape([-1,self.locate*3])
+                    loc[s,-1,:] = mne.vertex_to_mni(mxvtx_long,hemi,self.subject,verbose=False).reshape([-1,self.locate*3])
 
             self.qtrue_all = loc
             self.p=loc.shape[2]
@@ -349,10 +348,10 @@ class prepro:
                 I,J=i[-1-self.locate:-1],j[-1-self.locate:-1]#I is neuron index,J is temporal index
                 hemi = np.where(I<nd/2,0,1).reshape([-1])
                 mxvtx_long =vtx_long[I].reshape([-1])
-                if subject is 'sample':
-                    loc[ind_s,-1,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,subjects_dir='/home/jcasa/mne_data/MNE-sample-data/subjects',verbose=False).reshape([-1,self.locate*3])
+                if self.subject is 'sample':
+                    loc[ind_s,-1,:] = mne.vertex_to_mni(mxvtx_long,hemi,self.subject,subjects_dir='/home/jcasa/mne_data/MNE-sample-data/subjects',verbose=False).reshape([-1,self.locate*3])
                 else:
-                    loc[ind_s,-1,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,verbose=False).reshape([-1,self.locate*3])
+                    loc[ind_s,-1,:] = mne.vertex_to_mni(mxvtx_long,hemi,self.subject,verbose=False).reshape([-1,self.locate*3])
                 ind_s+=1
             self.qtrue_all = loc
             self.p=loc.shape[2]
