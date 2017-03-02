@@ -6,7 +6,7 @@ from matplotlib import cm
 from matplotlib.ticker import LinearLocator, FormatStrFormatter
 import matplotlib.pyplot as plt
 import time
-import Xnn_prepro as nn_prepro
+import nn_prepro
 
 def pred_obs(guess,locate,name,num,nummax,ax=None,fig=None):
     print guess.shape

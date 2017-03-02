@@ -30,6 +30,29 @@ def scale_dipole(dipole_in,subsample=1):
     qtrue=q.reshape([p,b,n]).transpose((1,2,0))#bxnxp
     return qtrue, p
 
+def scale_dipoleXYZT_OH(dipole_in,subsample=1):
+    #dipole_in is pxnxb
+    dipole_in=dipole_in[range(0,dipole_in.shape[0],subsample)]
+    p=dipole_in.shape[0]
+    n=dipole_in.shape[1]
+    b=dipole_in.shape[2]
+    print p, " Dipoles"
+    qq=dipole_in.transpose((0,2,1)).reshape([p,-1])#pxnxb->pxbxn->pxb*n
+    i,j = np.unravel_index(np.argsort(np.ravel(qq)),qq.shape)
+    I,J=i[-1],j[-1]#I is neuron index,J is temporal index
+    #qq is pxbatch_size*n_steps - convert to one-hot for tf neural net
+    #this should not be done if you want to fit current density.
+    #ppp=np.argmax(np.abs(np.nan_to_num(qq)),axis=0)
+    q = np.zeros(qq.shape)
+    q[I,-1]=1.0#qq is pxbatch_size*n_steps
+    #ONE-HOT!!! convert to one-hot for tf neural net
+    #don't do that if fitting current density. in fact it's redundant if you use cross-entropy as the cost function.
+    #q=(qq-np.amin(qq,axis=0))/(np.amax(qq,axis=0)-np.amin(qq,axis=0))
+    print "Dipoles now reshaped for TF NN."#as one-hot encoding"
+    q=qq
+    qtrue=q.reshape([p,b,n]).transpose((1,2,0))#bxnxp
+    return qtrue, p
+
 #preprocesses real data into a format acceptable to the NN.
 #batched
 #run __init__-->pca-->interp-->reshape
@@ -92,15 +115,32 @@ class meas:
         self.EL0=[el0,el1]
         self.R0=[r0,r1]
 
-    def pca(self):
-        for [channel,m] in [[0,self.m0],[1,self.m1]]:
-            if self.batch_size*self.n_steps>m:
-                mPCA=PCA(self.meas_in[channel].T)
-                self.meas_in[channel]=mPCA.Y.T
-            else:
-                mPCA=PCA(self.meas_in[channel])
-                self.meas_in[channel]=mPCA.Y
-
+    def pca(self, Wt=None):
+        if Wt is None:
+            Wt = [np.zeros((self.m0,self.m0)),np.zeros((self.m1,self.m1))]
+            for [channel,m] in [[0,self.m0],[1,self.m1]]:
+                if self.batch_size*self.n_steps>m:
+                    mPCA=PCA(self.meas_in[channel].T)
+                    self.meas_in[channel]=mPCA.Y.T
+                
+                else:
+                    mPCA=PCA(self.meas_in[channel])
+                    self.meas_in[channel]=mPCA.Y
+                print 'Wt shape: ',mPCA.Wt.shape
+                Wt[channel]=mPCA.Wt
+        else:
+            for [channel,m] in [[0,self.m0],[1,self.m1]]:
+                if self.batch_size*self.n_steps>m:
+                    mPCA=PCA(self.meas_in[channel].T)
+                    mPCA.Wt=Wt[channel]
+                    self.meas_in[channel]=mPCA.Y.T
+                
+                else:
+                    mPCA=PCA(self.meas_in[channel])
+                    mPCA.Wt=Wt[channel]
+                    self.meas_in[channel]=mPCA.Y
+                print 'Wt shape: ',mPCA.Wt.shape
+        return Wt
     def scale(self):
         for channel in [0,1]:
             self.meas_in[channel]=np.nan_to_num((self.meas_in[channel]-np.amin(self.meas_in[channel],axis=0))/(np.amax(self.meas_in[channel],axis=0)-np.amin(self.meas_in[channel],axis=0)))
@@ -118,7 +158,7 @@ class meas:
         print "Interpolate ..."
         f=np.zeros((self.m,self.n_steps*self.batch_size))
         g=np.zeros((self.m,self.n_steps*self.batch_size))
-        self.mes_out=[f,g]
+        self.meas_out=[f,g]
         
         for channel in [0,1]:
             print "Channel ", channel
