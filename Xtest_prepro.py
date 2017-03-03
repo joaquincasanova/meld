@@ -39,44 +39,44 @@ def pred_obs(guess,locate,name,num,nummax,ax=None,fig=None):
 pca=True
 subsample=1
 locate=95
-
-for subject_id in ['aud',7,8]:
-    for cnn in [True, False]:
-        for rnn in [True, False]:
-            if subject_id is 'aud':
-                treats=['left/auditory', 'right/auditory', 'left/visual', 'right/visual']
-            else:
-                treats=['face/famous','scrambled','face/unfamiliar']
-            nummax=len(treats)
-            ax=None
-            fig=None
-            num=0
-            prepro = prepro_class.prepro(selection='all',pca=pca,subsample=1,justdims=True,cnn=cnn,locate=locate,treat=None,rnn=rnn,Wt=None)
-            if subject_id is 'aud':
-                prepro.aud_dataset()
-            else:
-                prepro.faces_dataset(subject_id)
-
-            Wt = prepro.Wt
-
-            for treat in treats:
-                prepro = prepro_class.prepro(selection='all',pca=pca,subsample=1,justdims=True,cnn=cnn,locate=locate,treat=treat,rnn=rnn,Wt=Wt)
+for locate in [10,1]:
+    for subject_id in ['aud']:
+        for cnn in [True]:
+            for rnn in [True]:
                 if subject_id is 'aud':
-                    prepro.aud_dataset()
+                    treats=['left/auditory', 'right/auditory', 'left/visual', 'right/visual']
                 else:
-                    prepro.faces_dataset(subject_id)        
-
-                test, val, batch_list, batches = prepro_class.ttv(prepro.total_batch_size,.2,.1,.1,rand_test=True)
-
-                prepro = prepro_class.prepro(selection=test,pca=pca,subsample=1,justdims=False,cnn=cnn,locate=locate,treat=treat,rnn=rnn,Wt=Wt)
+                    treats=['face/famous','scrambled','face/unfamiliar']
+                nummax=len(treats)
+                ax=None
+                fig=None
+                num=0
+                prepro = prepro_class.prepro(selection='all',pca=pca,subsample=1,justdims=True,cnn=cnn,locate=locate,treat=None,rnn=rnn,Wt=None)
                 if subject_id is 'aud':
                     prepro.aud_dataset()
                 else:
                     prepro.faces_dataset(subject_id)
-                meas_img_test = prepro.meas_img_all
-                qtrue_test = prepro.qtrue_all
-                p=prepro.p
-                m=prepro.m
 
-                ax,fig=pred_obs(qtrue_test,locate,treat,num,nummax,ax=ax,fig=fig)
-                num+=1
+                Wt = prepro.Wt
+
+                for treat in treats:
+                    prepro = prepro_class.prepro(selection='all',pca=pca,subsample=1,justdims=True,cnn=cnn,locate=locate,treat=treat,rnn=rnn,Wt=Wt)
+                    if subject_id is 'aud':
+                        prepro.aud_dataset()
+                    else:
+                        prepro.faces_dataset(subject_id)        
+
+                    test, val, batch_list, batches = prepro_class.ttv(prepro.total_batch_size,.2,.1,.1,rand_test=True)
+
+                    prepro = prepro_class.prepro(selection=test,pca=pca,subsample=1,justdims=False,cnn=cnn,locate=locate,treat=treat,rnn=rnn,Wt=Wt)
+                    if subject_id is 'aud':
+                        prepro.aud_dataset()
+                    else:
+                        prepro.faces_dataset(subject_id)
+                    meas_img_test = prepro.meas_img_all
+                    qtrue_test = prepro.qtrue_all
+                    p=prepro.p
+                    m=prepro.m
+
+                    ax,fig=pred_obs(qtrue_test,locate,treat,num,nummax,ax=ax,fig=fig)
+                    num+=1

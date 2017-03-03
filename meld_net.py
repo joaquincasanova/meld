@@ -7,8 +7,7 @@ def mats_4_err_calc(locate):
     print 'w0', w0.shape
     w1 = np.zeros((3*locate,locate))
     for l in range(0,locate):
-        for i in [0,1,2]:
-            w1[i+l,l]=1
+        w1[3*l:3*(l+1),l]=1./3.
     print 'w1', w1.shape
     return w0,w1
 

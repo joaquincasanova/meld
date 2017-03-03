@@ -3,7 +3,7 @@ from numpy import matlib
 import sphere
 import dipole_class_xyz
 import tensorflow as tf
-import meld_net
+import Xmeld_net as meld_net
 import csv
 import prepro_class
 import time
@@ -57,13 +57,13 @@ for locate in [95,10,1]:
         else:
             params_list = [[3,3,5,10,3,.2,.2,.2]]
 
-        for rnn in [False,True]:
+        for rnn in [True,False]:
             for subject_id in ['aud']:
                 if subject_id is 'aud':
                     treats=['left/auditory', 'right/auditory', 'left/visual', 'right/visual',None]
                 else:
                     treats=['face/famous','scrambled','face/unfamiliar']
-
+                treats = [None]
                 prepro = prepro_class.prepro(selection='all',pca=pca,subsample=subsample,justdims=True,cnn=cnn,locate=locate,treat=None,rnn=rnn,Wt=None)
                 if subject_id is 'aud':
                     prepro.aud_dataset()
@@ -88,7 +88,7 @@ for locate in [95,10,1]:
                     print 'Subject: ',subject_id,' PCA: ',pca,' Random: ',rand_test, ' CNN: ',cnn, ' RNN: ',rnn, 'Locate: ',locate, 'Treat: ',lab_treat
 
                     fieldnames=['batches','learning rate','batch_size','per_batch','dropout','beta','k_conv','n_conv1','n_conv2','n_layer','n_lstm','n_steps','train step','cost']
-                    name='./data/XYZTsubject_%s_pca_all_%s_rand_%s_cnn_%s_rnn_%s_locate_%s_treat_%s' % (subject_id, pca, rand_test, cnn, rnn,locate,lab_treat)
+                    name='./data/X_subject_%s_pca_all_%s_rand_%s_cnn_%s_rnn_%s_locate_%s_treat_%s' % (subject_id, pca, rand_test, cnn, rnn,locate,lab_treat)
                     fname = name + '.csv' 
 
                     with open(fname,'a') as csvfile:
@@ -140,7 +140,7 @@ for locate in [95,10,1]:
                             nn.initializer()     
 
                             with tf.Session() as session:
-                                logdir = '/tmp/tensorflowlogs/XYZTsub_%s/11x11/pca_all_%s/rand_%s/cnn_%s/rnn_%s/locate_knn_%s/treat_%s/' % (subject_id,pca,rand_test,cnn,rnn,locate,lab_treat)
+                                logdir = '/tmp/tensorflowlogs/X_sub_%s/11x11/pca_all_%s/rand_%s/cnn_%s/rnn_%s/locate_knn_%s/treat_%s/' % (subject_id,pca,rand_test,cnn,rnn,locate,lab_treat)
                                 if tf.gfile.Exists(logdir):
                                     tf.gfile.DeleteRecursively(logdir)
                                 tf.gfile.MakeDirs(logdir)
@@ -172,7 +172,7 @@ for locate in [95,10,1]:
                                             train_summary, _ , guess,true,cost = session.run([nn.train_summary, nn.train_step, nn.qhat, nn.qtrain_unflat, nn.cost],feed_dict={nn.qtrainPH: qtrue, nn.measPH: meas_img, nn.dropoutPH: dropout, nn.betaPH: beta})
                                         else:
                                             train_summary, _ , guess,true,cost = session.run([nn.train_summary, nn.train_step, nn.qhat_last, nn.qtrain_last, nn.cost],feed_dict={nn.qtrainPH: qtrue, nn.measPH: meas_img, nn.dropoutPH: dropout, nn.betaPH: beta})
-
+                                        
                                         if step % print_step==0:
                                             print "Train Step: ", step, "Cost: ",cost
 
