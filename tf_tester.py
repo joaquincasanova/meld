@@ -5,7 +5,7 @@ import dipole_class_xyz
 import tensorflow as tf
 import meld_net
 import csv
-import nn_prepro
+import prepro_class
 import time
 import matplotlib.pyplot as plt
 
@@ -40,7 +40,7 @@ def pred_obs(guess,true,locate,name):
 
 pca = True
 rand_test = True
-plot_step = 500
+plot_step = 1000
 val_step = 100
 print_step = 10
 learning_rate = 0.005
@@ -57,14 +57,29 @@ for locate in [95,10,1]:
         else:
             params_list = [[3,3,5,10,3,.2,.2,.2]]
 
-        for rnn in [False,True]:
+        for rnn in [True,False]:
             for subject_id in ['aud']:
                 if subject_id is 'aud':
                     treats=['left/auditory', 'right/auditory', 'left/visual', 'right/visual',None]
                 else:
                     treats=['face/famous','scrambled','face/unfamiliar']
-                treats=[None]
+                treats = [None]
+                prepro = prepro_class.prepro(selection='all',pca=pca,subsample=subsample,justdims=True,cnn=cnn,locate=locate,treat=None,rnn=rnn,Wt=None)
+                if subject_id is 'aud':
+                    prepro.aud_dataset()
+                else:
+                    prepro.faces_dataset(subject_id)
+
+                Wt = prepro.Wt#calculate with ALL
+                
                 for treat in treats:
+
+                    prepro = prepro_class.prepro(selection='all',pca=pca,subsample=subsample,justdims=True,cnn=cnn,locate=locate,treat=treat,rnn=rnn,Wt=Wt)
+                    if subject_id is 'aud':
+                        prepro.aud_dataset()
+                    else:
+                        prepro.faces_dataset(subject_id)        
+                    
                     if treat is not None:
                         lab_treat=treat.replace("/","_")
                     else:
@@ -73,7 +88,7 @@ for locate in [95,10,1]:
                     print 'Subject: ',subject_id,' PCA: ',pca,' Random: ',rand_test, ' CNN: ',cnn, ' RNN: ',rnn, 'Locate: ',locate, 'Treat: ',lab_treat
 
                     fieldnames=['batches','learning rate','batch_size','per_batch','dropout','beta','k_conv','n_conv1','n_conv2','n_layer','n_lstm','n_steps','train step','cost']
-                    name='./data/fix_subject_%s_pca_all_%s_rand_%s_cnn_%s_rnn_%s_locate_%s_treat_%s' % (subject_id, pca, rand_test, cnn, rnn,locate,lab_treat)
+                    name='./data/X_subject_%s_pca_all_%s_rand_%s_cnn_%s_rnn_%s_locate_%s_treat_%s' % (subject_id, pca, rand_test, cnn, rnn,locate,lab_treat)
                     fname = name + '.csv' 
 
                     with open(fname,'a') as csvfile:
@@ -81,36 +96,37 @@ for locate in [95,10,1]:
                         writer.writeheader()
 
                         for [k_conv, n_conv1, n_conv2, n_lstm, n_layer, test_frac, val_frac, batch_frac] in params_list:
-                            if subject_id is 'aud':
-                                meas_dims, m, p, n_steps, total_batch_size,Wt = nn_prepro.aud_dataset(justdims=True,cnn=cnn,locate=locate,treat=None)
-                                meas_dims, m, p, n_steps, total_batch_size,Wt = nn_prepro.aud_dataset(justdims=True,cnn=cnn,locate=locate,treat=treat,Wt=Wt)
-                            else:
-                                meas_dims, m, p, n_steps, total_batch_size,Wt = nn_prepro.faces_dataset(subject_id,cnn=cnn,justdims=True,locate=locate,treat=None)
-                                meas_dims, m, p, n_steps, total_batch_size,Wt = nn_prepro.faces_dataset(subject_id,cnn=cnn,justdims=True,locate=locate,treat=treat,Wt=Wt)
 
+                            test, val, batch_list, batches = prepro_class.ttv(prepro.total_batch_size,test_frac,val_frac,batch_frac,rand_test=rand_test)
+                          
                             if cnn is 'fft':
                                 n_chan_in=1
                             else:
                                 n_chan_in=2
 
 
-                            test, val, batch_list, batches = nn_prepro.ttv(total_batch_size,test_frac,val_frac,batch_frac,rand_test=rand_test)
+                            prepro = prepro_class.prepro(selection=test,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,rnn=rnn,Wt=Wt)
+                            if subject_id is 'aud':
+                                prepro.aud_dataset()
+                            else:
+                                prepro.faces_dataset(subject_id)
+                            meas_img_test = prepro.meas_img_all
+                            qtrue_test = prepro.qtrue_all
 
+                            prepro = prepro_class.prepro(selection=val,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,rnn=rnn,Wt=Wt)
+                            if subject_id is 'aud':
+                                prepro.aud_dataset()
+                            else:
+                                prepro.faces_dataset(subject_id)
+                            meas_img_val = prepro.meas_img_all
+                            qtrue_val = prepro.qtrue_all
+                            p=prepro.p
+                            m=prepro.m
+                            n_steps=prepro.n_steps
+                            meas_dims=prepro.meas_dims
+                            
                             per_batch = int(5000/batches)
-                            if subject_id is 'aud':
-                                meas_img_test, qtrue_test, meas_dims, m, p, n_steps, test_size,Wt = nn_prepro.aud_dataset(selection=test,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,Wt=Wt)
-                            else:
-                                meas_img_test, qtrue_test, meas_dims, m, p, n_steps, test_size,Wt = nn_prepro.faces_dataset(subject_id,selection=test,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,Wt=Wt)
-                            #pick a test batch
-                            print "Test batch ",test
-
-                            if subject_id is 'aud':
-                                meas_img_val, qtrue_val, meas_dims, m, p, n_steps, val_size,Wt = nn_prepro.aud_dataset(selection=val,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,Wt=Wt)
-                            else:
-                                meas_img_val, qtrue_val, meas_dims, m, p, n_steps, val_size,Wt = nn_prepro.faces_dataset(subject_id,selection=val,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,Wt=Wt)
-                            #pick a val batch
-                            print "Val batch ",val
-
+                            
                             n_out=p
                             k_pool=1
 
@@ -124,7 +140,7 @@ for locate in [95,10,1]:
                             nn.initializer()     
 
                             with tf.Session() as session:
-                                logdir = '/tmp/tensorflowlogs/fix_sub_%s/11x11/pca_all_%s/rand_%s/cnn_%s/rnn_%s/locate_knn_%s/treat_%s/' % (subject_id,pca,rand_test,cnn,rnn,locate,lab_treat)
+                                logdir = '/tmp/tensorflowlogs/X_sub_%s/11x11/pca_all_%s/rand_%s/cnn_%s/rnn_%s/locate_knn_%s/treat_%s/' % (subject_id,pca,rand_test,cnn,rnn,locate,lab_treat)
                                 if tf.gfile.Exists(logdir):
                                     tf.gfile.DeleteRecursively(logdir)
                                 tf.gfile.MakeDirs(logdir)
@@ -137,12 +153,16 @@ for locate in [95,10,1]:
                                     err_l = 500.
                                     batch = batch_list[batch_num]
                                     print "Train batch ", batch_num, batch
-                                    #pick a first batch of batch_size
-                                    if subject_id is 'aud':
-                                        meas_img, qtrue, meas_dims, m, p, n_steps, batch_size,Wt = nn_prepro.aud_dataset(selection=batch,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,Wt=Wt)
-                                    else:
-                                        meas_img, qtrue, meas_dims, m, p, n_steps, batch_size,Wt = nn_prepro.faces_dataset(subject_id,selection=batch,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,Wt=Wt)
 
+                                    #pick a first batch of batch_size
+                                    prepro = prepro_class.prepro(selection=batch,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,rnn=rnn,Wt=Wt)
+                                    if subject_id is 'aud':
+                                        prepro.aud_dataset()
+                                    else:
+                                        prepro.faces_dataset(subject_id)
+                                    meas_img = prepro.meas_img_all
+                                    qtrue = prepro.qtrue_all
+                                    batch_size = prepro.total_batch_size
                                     step=0
                                     while step<per_batch:
                                         run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
@@ -152,15 +172,15 @@ for locate in [95,10,1]:
                                             train_summary, _ , guess,true,cost = session.run([nn.train_summary, nn.train_step, nn.qhat, nn.qtrain_unflat, nn.cost],feed_dict={nn.qtrainPH: qtrue, nn.measPH: meas_img, nn.dropoutPH: dropout, nn.betaPH: beta})
                                         else:
                                             train_summary, _ , guess,true,cost = session.run([nn.train_summary, nn.train_step, nn.qhat_last, nn.qtrain_last, nn.cost],feed_dict={nn.qtrainPH: qtrue, nn.measPH: meas_img, nn.dropoutPH: dropout, nn.betaPH: beta})
-
+                                        
                                         if step % print_step==0:
                                             print "Train Step: ", step, "Cost: ",cost
 
                                         if step % plot_step==0:
 
                                             if locate is True: locate=1
-                                            #if locate>0:
-                                                #pred_obs(guess, true, locate,name+str(step))
+                                            if locate>0:
+                                                pred_obs(guess, true, locate,name+str(step))
                                                 
 
                                         writer.writerow({'batches':batches,'learning rate':learning_rate,'batch_size':batch_size,'per_batch':per_batch,'dropout':dropout,'beta':beta,'k_conv':k_conv,'n_conv1':n_conv1,'n_conv2':n_conv2,'n_layer':n_layer,'n_steps':n_steps,'n_lstm':n_lstm,'train step':step,'cost':cost})
