@@ -1,6 +1,10 @@
 import os
 import numpy as np
 from numpy import matlib
+
+import matplotlib.mlab as mlab
+import matplotlib.pyplot as plt
+
 import sphere
 import dipole_class_xyz
 import tensorflow as tf
@@ -238,6 +242,36 @@ class prepro:
             self.Wt=Wt_calc(self.stc,self.epochs_eeg,self.epochs_meg)
 
         self.prepro()
+
+    def dipole_hist(self):
+        if self.treat is None:
+            lab='All'
+        else:
+            lab=self.treat
+        nd=self.stc[0].data.shape[0]
+        ns=self.stc[0].data.shape[1]
+        if self.selection is 'all':
+            x = np.vstack((np.abs(self.stc[0].data),np.abs(self.stc[1].data)))
+            for s in range(2,len(self.stc)):
+                x = np.vstack((x,np.abs(self.stc[s].data)))
+        else:
+            x = np.vstack((np.abs(self.stc[self.selection[0]].data),np.abs(self.stc[self.selection[1]].data)))
+            for s in self.selection[2:]:
+                x = np.vstack((x,np.abs(self.stc[s].data)))
+            
+            # the histogram of the data
+        #for t in range(0,ns):
+        n, bins, patches = plt.hist(np.log(x.reshape([-1,1])), 500, normed=1, facecolor='green', alpha=0.75)
+            
+        plt.xlabel('Current')
+        plt.ylabel('Probability')
+        plt.title('Histogram of Current: '+lab)
+        #plt.axis([40, 160, 0, 0.03])
+        plt.grid(True)
+        
+        plt.show()
+            
+        return
         
     def prepro(self):
         if self.cnn is True:

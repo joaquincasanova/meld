@@ -47,7 +47,7 @@ learning_rate = 0.005
 dropout = 1.
 beta = 0.
 
-for locate in [95,10,1]:
+for locate in [1]:
     subsample = 1
     if locate  is False:
         subsample=20
@@ -60,9 +60,9 @@ for locate in [95,10,1]:
         for rnn in [True,False]:
             for subject_id in ['aud']:
                 if subject_id is 'aud':
-                    treats=['left/auditory', 'right/auditory', 'left/visual', 'right/visual',None]
+                    treats=[None]#'left/auditory', 'right/auditory', 'left/visual', 'right/visual',None]
                 else:
-                    treats=['face/famous','scrambled','face/unfamiliar']
+                    treats=[None]#['face/famous','scrambled','face/unfamiliar']
                 treats = [None]
                 prepro = prepro_class.prepro(selection='all',pca=pca,subsample=subsample,justdims=True,cnn=cnn,locate=locate,treat=None,rnn=rnn,Wt=None)
                 if subject_id is 'aud':

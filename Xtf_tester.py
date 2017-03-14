@@ -1,11 +1,10 @@
 import numpy as np
 from numpy import matlib
 import sphere
-import dipole_class_xyz
 import tensorflow as tf
-import Xmeld_net as meld_net
+import meld_net
 import csv
-import prepro_class
+import Xprepro_class as prepro_class
 import time
 import matplotlib.pyplot as plt
 
@@ -47,7 +46,7 @@ learning_rate = 0.005
 dropout = 1.
 beta = 0.
 
-for locate in [95,10,1]:
+for locate in [1]:
     subsample = 1
     if locate  is False:
         subsample=20
@@ -58,15 +57,28 @@ for locate in [95,10,1]:
             params_list = [[3,3,5,10,3,.2,.2,.2]]
 
         for rnn in [True,False]:
-            for subject_id in ['aud']:
+            for subject_id in ['aud','rat']:
                 if subject_id is 'aud':
-                    treats=['left/auditory', 'right/auditory', 'left/visual', 'right/visual',None]
+                    treats=[None]#,'left/auditory', 'right/auditory', 'left/visual', 'right/visual',None]
+                    meas_dims=[11,11]
+                elif subject_id is 'rat':
+                    treats=[None]
+                    dipole_dims=[1,5,5]
+                    meas_dims=[4,1]
                 else:
-                    treats=['face/famous','scrambled','face/unfamiliar']
-                treats = [None]
+                    treats=[None]#,'face/famous','scrambled','face/unfamiliar',None]
+                    meas_dims=[11,11]
+                          
+                if cnn is 'fft' or subject_id is 'rat':
+                    n_chan_in=1
+                else:
+                    n_chan_in=2
+                #Instance of prepro class.
                 prepro = prepro_class.prepro(selection='all',pca=pca,subsample=subsample,justdims=True,cnn=cnn,locate=locate,treat=None,rnn=rnn,Wt=None)
                 if subject_id is 'aud':
                     prepro.aud_dataset()
+                elif subject_id is 'rat':
+                    prepro.rat_synth(1000,1e-3,100,meas_dims,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True)
                 else:
                     prepro.faces_dataset(subject_id)
 
@@ -77,6 +89,8 @@ for locate in [95,10,1]:
                     prepro = prepro_class.prepro(selection='all',pca=pca,subsample=subsample,justdims=True,cnn=cnn,locate=locate,treat=treat,rnn=rnn,Wt=Wt)
                     if subject_id is 'aud':
                         prepro.aud_dataset()
+                    elif subject_id is 'rat':
+                        prepro.rat_synth(1000,1e-3,100,meas_dims,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True)
                     else:
                         prepro.faces_dataset(subject_id)        
                     
@@ -88,7 +102,7 @@ for locate in [95,10,1]:
                     print 'Subject: ',subject_id,' PCA: ',pca,' Random: ',rand_test, ' CNN: ',cnn, ' RNN: ',rnn, 'Locate: ',locate, 'Treat: ',lab_treat
 
                     fieldnames=['batches','learning rate','batch_size','per_batch','dropout','beta','k_conv','n_conv1','n_conv2','n_layer','n_lstm','n_steps','train step','cost']
-                    name='./data/X_subject_%s_pca_all_%s_rand_%s_cnn_%s_rnn_%s_locate_%s_treat_%s' % (subject_id, pca, rand_test, cnn, rnn,locate,lab_treat)
+                    name='./data/subject_%s_pca_all_%s_rand_%s_cnn_%s_rnn_%s_locate_%s_treat_%s' % (subject_id, pca, rand_test, cnn, rnn,locate,lab_treat)
                     fname = name + '.csv' 
 
                     with open(fname,'a') as csvfile:
@@ -97,17 +111,15 @@ for locate in [95,10,1]:
 
                         for [k_conv, n_conv1, n_conv2, n_lstm, n_layer, test_frac, val_frac, batch_frac] in params_list:
 
-                            test, val, batch_list, batches = prepro_class.ttv(prepro.total_batch_size,test_frac,val_frac,batch_frac,rand_test=rand_test)
-                          
-                            if cnn is 'fft':
-                                n_chan_in=1
-                            else:
-                                n_chan_in=2
+                            assert cnn is True and np.min(meas_dims)>k_conv, "Image smaller than kernel"
 
+                            test, val, batch_list, batches = prepro_class.ttv(prepro.total_batch_size,test_frac,val_frac,batch_frac,rand_test=rand_test)
 
                             prepro = prepro_class.prepro(selection=test,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,rnn=rnn,Wt=Wt)
                             if subject_id is 'aud':
                                 prepro.aud_dataset()
+                            elif subject_id is 'rat':
+                                prepro.rat_synth(1000,1e-3,100,meas_dims,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True)
                             else:
                                 prepro.faces_dataset(subject_id)
                             meas_img_test = prepro.meas_img_all
@@ -116,10 +128,13 @@ for locate in [95,10,1]:
                             prepro = prepro_class.prepro(selection=val,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,rnn=rnn,Wt=Wt)
                             if subject_id is 'aud':
                                 prepro.aud_dataset()
+                            elif subject_id is 'rat':
+                                prepro.rat_synth(1000,1e-3,100,meas_dims,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True)
                             else:
                                 prepro.faces_dataset(subject_id)
                             meas_img_val = prepro.meas_img_all
                             qtrue_val = prepro.qtrue_all
+                            
                             p=prepro.p
                             m=prepro.m
                             n_steps=prepro.n_steps
@@ -140,7 +155,7 @@ for locate in [95,10,1]:
                             nn.initializer()     
 
                             with tf.Session() as session:
-                                logdir = '/tmp/tensorflowlogs/X_sub_%s/11x11/pca_all_%s/rand_%s/cnn_%s/rnn_%s/locate_knn_%s/treat_%s/' % (subject_id,pca,rand_test,cnn,rnn,locate,lab_treat)
+                                logdir = '/tmp/tensorflowlogs/sub_%s/4x1/pca_all_%s/rand_%s/cnn_%s/rnn_%s/locate_knn_%s/treat_%s/' % (subject_id,pca,rand_test,cnn,rnn,locate,lab_treat)
                                 if tf.gfile.Exists(logdir):
                                     tf.gfile.DeleteRecursively(logdir)
                                 tf.gfile.MakeDirs(logdir)
@@ -158,6 +173,8 @@ for locate in [95,10,1]:
                                     prepro = prepro_class.prepro(selection=batch,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,rnn=rnn,Wt=Wt)
                                     if subject_id is 'aud':
                                         prepro.aud_dataset()
+                                    elif subject_id is 'rat':
+                                        prepro.rat_synth(1000,1e-3,100,meas_dims,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True)
                                     else:
                                         prepro.faces_dataset(subject_id)
                                     meas_img = prepro.meas_img_all

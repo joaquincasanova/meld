@@ -1,9 +1,12 @@
 import os
 import numpy as np
 from numpy import matlib
+
+import matplotlib.mlab as mlab
+import matplotlib.pyplot as plt
+
 import sphere
-import dipole_class_xyz
-import tensorflow as tf
+import dipole_class_rat
 import csv
 import meas_class
 import mne
@@ -112,6 +115,53 @@ class prepro:
         self.treat=treat
         self.rnn=rnn
         self.Wt=Wt
+
+    def rat_synth(self,total_batch_size,delT,n_steps,meas_dims,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True):
+        self.total_batch_size=total_batch_size
+        if self.selection is 'all':
+            self.batch_size=self.total_batch_size
+        else:
+            self.batch_size=len(self.selection)
+        self.subject='rat'
+        self.delT=delT
+        self.n_steps=n_steps
+        self.meas_dims=meas_dims
+        self.meas_xyz=meas_xyz
+        self.dipole_xyz=dipole_xyz
+        self.dipole_dims=dipole_dims
+        self.n_chan_in=n_chan_in
+        self.noise_flag=noise_flag
+        self.orient=orient
+
+        instance = dipole_class_rat.dipole(self.delT, self.batch_size, self.n_steps,
+                          2, self.meas_dims, self.dipole_dims,
+                          orient=self.orient, noise_flag=self.noise_flag,
+                          dipole_xyz=self.dipole_xyz, meas_xyz=self.meas_xyz,pca=self.pca)
+        instance.batch_sequence_gen()
+        
+        self.meg_data=instance.meg_data
+        self.eeg_data=instance.eeg_data
+        self.dipole=instance.qtrue
+        self.m=instance.m
+        self.p=instance.p
+        self.meg_xyz=instance.meg_xyz
+        assert self.meg_xyz.shape[0]==self.m and self.meg_xyz.shape[1]==3, self.meg_xyz.shape
+        self.eeg_xyz=instance.eeg_xyz
+        assert self.eeg_xyz.shape[0]==self.m and self.eeg_xyz.shape[1]==3, self.eeg_xyz.shape
+        
+        self.dipole_xyz=instance.dipole_xyz
+        assert self.dipole_xyz.shape[0]==self.p and self.dipole_xyz.shape[1]==3, self.dipole_xyz.shape
+        self.n_steps=instance.n_steps
+        self.batch_size=instance.batch_size
+        
+        if self.locate is True:
+            self.p=3
+        elif self.locate>0:
+            self.p=3*self.locate                
+        else:
+            self.p=instance.p
+        self.rat_prepro()
+        
     def aud_dataset(self):
         print 'Treat: ', self.treat
         ###############################################################################
@@ -240,23 +290,96 @@ class prepro:
         self.prepro()
 
     def dipole_hist(self):
-        if selection is 'all':
-            for s in range(0,len(self.stc)):
-                np.abs(self.stc[s].data[:,])
+        if self.treat is None:
+            lab='All'
         else:
-            self.stc
+            lab=self.treat
+        nd=self.stc[0].data.shape[0]
+        ns=self.stc[0].data.shape[1]
+        if self.selection is 'all':
+            x = np.vstack((np.abs(self.stc[0].data),np.abs(self.stc[1].data)))
+            for s in range(2,len(self.stc)):
+                x = np.vstack((x,np.abs(self.stc[s].data)))
+        else:
+            x = np.vstack((np.abs(self.stc[self.selection[0]].data),np.abs(self.stc[self.selection[1]].data)))
+            for s in self.selection[2:]:
+                x = np.vstack((x,np.abs(self.stc[s].data)))
+            
             # the histogram of the data
-            n, bins, patches = plt.hist(x, 50, normed=1, facecolor='green', alpha=0.75)
-
-            plt.xlabel('Current')
-            plt.ylabel('Probability')
-            plt.title('Histogram of Current')
-            #plt.axis([40, 160, 0, 0.03])
-            plt.grid(True)
-
-            plt.show()
+        #for t in range(0,ns):
+        n, bins, patches = plt.hist(np.log(x.reshape([-1,1])), 500, normed=1, facecolor='green', alpha=0.75)
+            
+        plt.xlabel('Current')
+        plt.ylabel('Probability')
+        plt.title('Histogram of Current: '+lab)
+        #plt.axis([40, 160, 0, 0.03])
+        plt.grid(True)
         
-        return
+        plt.show()
+            
+    def location_rat(self):
+        self.qtrue_all = np.zeros([self.batch_size,self.n_steps,self.p])
+        for s in range(0,self.dipole.shape[2]):
+            mxloca = np.argsort(np.abs(self.dipole[:,:,s]),axis=0)#dipole is pxnxb
+            mxloc=mxloca[-1-self.locate:-1,:]#locatexn
+            loc=self.dipole_xyz[np.ravel(mxloc),:]#locate*nx3
+            loc=np.transpose(loc.reshape([-1,self.n_steps,3]),(1,0,2)).reshape([-1,self.locate*3])#nx3*locate=nxp
+            self.qtrue_all[s,:,:]=loc*1000.#mm
+        
+    def location_rat_XYZT(self):
+        self.qtrue_all = np.zeros([self.batch_size,self.n_steps,self.p])
+        for s in range(0,self.dipole.shape[2]):
+            #max location (index)
+            [i,j] = np.unravel_index(np.argsort(np.ravel(np.abs(self.dipole[:,:,s]))),self.dipole[:,:,s].shape)
+            I,J=i[-1-self.locate:-1],j[-1-self.locate:-1]#I is neuron index,J is temporal index
+            loc=self.dipole_xyz[I,:]#locatex3
+            loc=loc.reshape([-1])#->locate*3
+            self.qtrue_all[s,-1,:]=loc*1000.#mm
+            
+    def rat_prepro(self):
+        tf_meas = meas_class.meas(self.meg_data,self.meg_xyz, self.eeg_data,self.eeg_xyz, self.meas_dims, self.n_steps, self.batch_size)
+        if self.pca is True:
+            self.Wt=tf_meas.pca(Wt = self.Wt)
+        elif self.pca is False:
+            tf_meas.scale()
+        else:
+            pass
+        
+        if self.n_chan_in is 2:
+            if self.cnn is True:    
+                print "Image grid dimensions: ", self.meas_dims
+                tf_meas.interp()
+                tf_meas.reshape()
+                self.meas_img_all = tf_meas.meas_img
+                self.m =tf_meas.m
+            else:
+                self.meas_img_all = np.vstack((tf_meas.meas_in[0],tf_meas.meas_in[1]))
+                self.m =tf_meas.m0+tf_meas.m1
+        elif self.n_chan_in is 1:
+            if self.cnn is True:    
+                print "Image grid dimensions: ", self.meas_dims
+                tf_meas.interp()
+                tf_meas.reshape()
+                self.meas_img_all = np.expand_dims(tf_meas.meas_img[:,:,:,:,0],axis=-1)
+                self.m =tf_meas.m
+            else:
+                self.meas_img_all = np.vstack((tf_meas.meas_in[0]))
+                self.m =tf_meas.m0
+            
+        if self.locate is not False:
+            if self.rnn is True or self.cnn is 'fft':
+                self.location_rat_XYZT()
+            else:
+                self.location_rat()
+        else:
+            if self.rnn is True or self.cnn is 'fft':
+                #pxn_stepsxbatchsize
+                self.qtrue_all,self.p=meas_class.scale_dipoleXYZT_OH(self.dipole,subsample=self.subsample)    
+                #bxnxp
+            else:
+                #pxn_stepsxbatchsize
+                self.qtrue_all,self.p=meas_class.scale_dipole(self.dipole,subsample=self.subsample)    
+                #bxnxp
         
     def prepro(self):
         if self.cnn is True:
@@ -374,7 +497,7 @@ class prepro:
                 ind_s+=1
             self.qtrue_all = loc
             self.p=loc.shape[2]
-
+    
     def cnn_justdims(self):
         self.total_batch_size = len(self.stc)#number of events. we'll consider each event an example.
         if self.locate is True:
@@ -459,11 +582,11 @@ class prepro:
         else:
             if self.rnn is True or self.cnn is 'fft':
                 #pxn_stepsxbatchsize
-                self.qtrue_all,self.p=meas_class.scale_dipole(dipole,subsample=self.subsample)    
+                self.qtrue_all,self.p=meas_class.scale_dipoleXYZT_OH(dipole,subsample=self.subsample)    
                 #bxnxp
             else:
                 #pxn_stepsxbatchsize
-                self.qtrue_all,self.p=meas_class.scale_dipoleXYZT_OH(dipole,subsample=self.subsample)    
+                self.qtrue_all,self.p=meas_class.scale_dipole(dipole,subsample=self.subsample)    
                 #bxnxp
         #del self.stc, epochs, self.epochs_eeg, self.epochs_meg
         
@@ -517,11 +640,11 @@ class prepro:
         else:
             if self.rnn is True or self.cnn is 'fft':
                 #pxn_stepsxbatchsize
-                self.qtrue_all,self.p=meas_class.scale_dipole(dipole,subsample=self.subsample)    
+                self.qtrue_all,self.p=meas_class.scale_dipoleXYZT_OH(dipole,subsample=self.subsample)    
                 #bxnxp
             else:
                 #pxn_stepsxbatchsize
-                self.qtrue_all,self.p=meas_class.scale_dipoleXYZT_OH(dipole,subsample=self.subsample)    
+                self.qtrue_all,self.p=meas_class.scale_dipole(dipole,subsample=self.subsample)    
                 #bxnxp
         #del self.stc, epochs, self.epochs_eeg, self.epochs_meg
 
@@ -601,12 +724,11 @@ class prepro:
         else:
             if self.rnn is True or self.cnn is 'fft':
                 #pxn_stepsxbatchsize
-                self.qtrue_all,self.p=meas_class.scale_dipole(dipole,subsample=self.subsample)    
+                self.qtrue_all,self.p=meas_class.scale_dipoleXYZT_OH(dipole,subsample=self.subsample)    
                 #bxnxp
             else:
                 #pxn_stepsxbatchsize
-                self.qtrue_all,self.p=meas_class.scale_dipoleXYZT_OH(dipole,subsample=self.subsample)    
+                self.qtrue_all,self.p=meas_class.scale_dipole(dipole,subsample=self.subsample)    
                 #bxnxp
         #del self.stc, epochs, self.epochs_eeg, self.epochs_meg
 
-        

@@ -16,15 +16,7 @@ def scale_dipole(dipole_in,subsample=1):
     n=dipole_in.shape[1]
     b=dipole_in.shape[2]
     print p, " Dipoles"
-    qq=dipole_in.transpose((0,2,1)).reshape([p,-1])#pxnxb->pxbxn->pxb*n
-    #qq is pxbatch_size*n_steps - convert to one-hot for tf neural net
-    #this should not be done if you want to fit current density.
-    #ppp=np.argmax(np.abs(np.nan_to_num(qq)),axis=0)
-    #q = np.zeros(qq.shape)
-    #q[ppp,[range(0,qq.shape[1])]]=1.0#qq is pxbatch_size*n_steps
-    #ONE-HOT!!! convert to one-hot for tf neural net
-    #don't do that if fitting current density. in fact it's redundant if you use cross-entropy as the cost function.
-    #q=(qq-np.amin(qq,axis=0))/(np.amax(qq,axis=0)-np.amin(qq,axis=0))
+    qq=dipole_in.transpose((0,2,1)).reshape([p,-1])
     print "Dipoles now reshaped for TF NN."#as one-hot encoding"
     q=qq
     qtrue=q.reshape([p,b,n]).transpose((1,2,0))#bxnxp
@@ -76,13 +68,13 @@ class meas:
         ymin = np.amin([np.amin(self.Y0[0]),np.amin(self.Y0[1])])
         xmax = np.amin([np.amax(self.X0[0]),np.amax(self.X0[1])])
         ymax = np.amin([np.amax(self.Y0[0]),np.amax(self.Y0[1])])
-        print xmin,xmax,ymin,ymax
+#        print xmin,xmax,ymin,ymax
 
         azmin = np.amin([np.amin(self.AZ0[0]),np.amin(self.AZ0[1])])
         elmin = np.amin([np.amin(self.EL0[0]),np.amin(self.EL0[1])])
         azmax = np.amin([np.amax(self.AZ0[0]),np.amax(self.AZ0[1])])
         elmax = np.amin([np.amax(self.EL0[0]),np.amax(self.EL0[1])])
-        print azmin,azmax,elmin,elmax
+#        print azmin,azmax,elmin,elmax
 
         
         self.x = np.linspace(xmin,xmax,self.meas_dims[0])
