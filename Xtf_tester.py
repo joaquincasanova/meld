@@ -3,7 +3,7 @@ from numpy import matlib
 import sphere
 import dipole_class_xyz
 import tensorflow as tf
-import Xmeld_net as meld_net
+import meld_net
 import csv
 import prepro_class
 import time
