@@ -11,7 +11,43 @@ from mne.datasets import sample
 from mne.minimum_norm import (make_inverse_operator, apply_inverse,
                               write_inverse_operator, apply_inverse_epochs,
                               read_inverse_operator)
+
+def rat_synth(total_batch_size,delT,n_steps,meas_dims,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True,selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=True,treat=None,rnn=True,Wt=None):
     
+    if selection is 'all':
+        batch_size=total_batch_size
+    else:
+        batch_size=len(selection)
+    subject='rat'
+    
+    instance = dipole_class_rat.dipole(delT, batch_size, n_steps,
+                      2, meas_dims, dipole_dims,
+                      orient=orient, noise_flag=noise_flag,
+                      dipole_xyz=dipole_xyz, meas_xyz=meas_xyz,pca=pca)
+    instance.batch_sequence_gen()
+
+    meg_data=instance.meg_data
+    eeg_data=instance.eeg_data
+    dipole=instance.qtrue
+    m=instance.m
+    p=instance.p
+    meg_xyz=instance.meg_xyz
+    assert meg_xyz.shape[0]==m and meg_xyz.shape[1]==3, meg_xyz.shape
+    eeg_xyz=instance.eeg_xyz
+    assert eeg_xyz.shape[0]==m and eeg_xyz.shape[1]==3, eeg_xyz.shape
+
+    dipole_xyz=instance.dipole_xyz
+    assert dipole_xyz.shape[0]==p and dipole_xyz.shape[1]==3, dipole_xyz.shape
+    n_steps=instance.n_steps
+    batch_size=instance.batch_size
+    
+    if justdims is True:
+        meas_dims, m, p, n_steps, batch_size, Wt = rat_prepro(n_chan_in,dipole,dipole_xyz,meg_data,meg_xyz, eeg_data,eeg_xyz, meas_dims, n_steps, batch_size,subject,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate,rnn=rnn,Wt=Wt)
+        return meas_dims, m, p, n_steps, batch_size, Wt
+    else:
+        meas_img_all, qtrue_all, meas_dims, m, p, n_steps, batch_size, Wt = rat_prepro(n_chan_in,dipole,dipole_xyz,meg_data,meg_xyz, eeg_data,eeg_xyz, meas_dims, n_steps, batch_size,subject,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate,rnn=rnn,Wt=Wt)
+        return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, batch_size, Wt 
+
 def aud_dataset(selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=True,treat=None,rnn=True,Wt=None):
     print 'Treat: ', treat
     ###############################################################################
@@ -88,7 +124,7 @@ def aud_dataset(selection='all',pca=False,subsample=1,justdims=True,cnn=True,loc
     if Wt is None:
         print 'Precalculate PCA weights:'
         #weight PCA matrix. Uses 'treat' - so to apply across all treatments, use treat=None
-        Wt=Wt_calc(stc,epochs_eeg,epochs_meg)
+        Wt=Wt_calc(stc,epochs_eeg,epochs_meg,[11,11])
         
     #stc.save('sample_audvis-source-epochs')
  
@@ -141,7 +177,7 @@ def faces_dataset(subject_id,selection='all',pca=False,subsample=1,justdims=True
     if Wt is None:
         print 'Precalculate PCA weights:'
         #weight PCA matrix. Uses 'treat' - so to apply across all treatments, use treat=None
-        Wt=Wt_calc(stc,epochs_eeg,epochs_meg)
+        Wt=Wt_calc(stc,epochs_eeg,epochs_meg,[11,11])
         
     if justdims is True:
         meas_dims, m, p, n_steps, total_batch_size, Wt = prepro(stc, epochs, epochs_eeg,epochs_meg,subject,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate,rnn=rnn,Wt=Wt)
@@ -174,11 +210,10 @@ def prepro(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=False,
             meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size, Wt = xcnn_xjustdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate,rnn=rnn,Wt=Wt)
             return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size, Wt
 
-def Wt_calc(stc,epochs_eeg,epochs_meg):
+def Wt_calc(stc,epochs_eeg,epochs_meg,meas_dims):
     total_batch_size = len(stc)#number of events. we'll consider each event an example.
 
     n_steps = stc[0]._data.shape[1]
-    meas_dims=[11,11]
     
     n_eeg = epochs_eeg.get_data().shape[1]
 
@@ -217,11 +252,24 @@ def location(stc,subject,selection='all',locate=True):
             assert mxloc.shape[0]==locate and mxloc.shape[1]==ns
             hemi = np.where(mxloc<nd/2,0,1).reshape([-1])
             mxvtx_long =vtx_long[mxloc].reshape([-1])
+            #if subject is 'sample':
+            #    loc[s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,subjects_dir='/home/jcasa/mne_data/MNE-sample-data/subjects',verbose=False).reshape([-1,locate*3])
+            #else:
+            #    loc[s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,verbose=False).reshape([-1,locate*3])
             if subject is 'sample':
-                loc[s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,subjects_dir='/home/jcasa/mne_data/MNE-sample-data/subjects',verbose=False).reshape([-1,locate*3])
+                #ns*locatex3
+                tmp = mne.vertex_to_mni(mxvtx_long,hemi,subject,subjects_dir='/home/jcasa/mne_data/MNE-sample-data/subjects',verbose=False)
+                assert tmp.shape[0]==3 and tmp.shape[1]==ns*self.locate, tmp.shape
+                tmp = tmp.T.reshape([self.locate,ns,3])
+                tmp = numpy.transpose(tmp,(1,0,2)).reshape([-1,self.locate*3])
+                loc[s,: ,:] = tmp
             else:
-                loc[s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,verbose=False).reshape([-1,locate*3])
-                
+                tmp = mne.vertex_to_mni(mxvtx_long,hemi,subject,verbose=False).reshape([-1,locate*3])
+                assert tmp.shape[0]==3 and tmp.shape[1]==ns*self.locate, tmp.shape
+                tmp = tmp.T.reshape([self.locate,ns,3])
+                tmp = numpy.transpose(tmp,(1,0,2)).reshape([-1,self.locate*3])
+                loc[s,: ,:] = tmp
+            
         qtrue_all = loc
         p=loc.shape[2]
         return qtrue_all, p
@@ -242,11 +290,26 @@ def location(stc,subject,selection='all',locate=True):
             assert mxloc.shape[0]==locate and mxloc.shape[1]==ns
             hemi = np.where(mxloc<nd/2,0,1).reshape([-1])
             mxvtx_long =vtx_long[mxloc].reshape([-1])
+            #if subject is 'sample':
+            #    loc[ind_s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,subjects_dir='/home/jcasa/mne_data/MNE-sample-data/subjects',verbose=False).reshape([-1,locate*3])
+            #else:
+            #    loc[ind_s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,verbose=False).reshape([-1,locate*3])
+            #ind_s+=1
             if subject is 'sample':
-                loc[ind_s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,subjects_dir='/home/jcasa/mne_data/MNE-sample-data/subjects',verbose=False).reshape([-1,locate*3])
+                #ns*locatex3
+                tmp = mne.vertex_to_mni(mxvtx_long,hemi,subject,subjects_dir='/home/jcasa/mne_data/MNE-sample-data/subjects',verbose=False)
+                assert tmp.shape[0]==3 and tmp.shape[1]==ns*self.locate, tmp.shape
+                tmp = tmp.T.reshape([self.locate,ns,3])
+                tmp = numpy.transpose(tmp,(1,0,2)).reshape([-1,self.locate*3])
+                loc[ind_s,: ,:] = tmp
             else:
-                loc[ind_s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,verbose=False).reshape([-1,locate*3])
+                tmp = mne.vertex_to_mni(mxvtx_long,hemi,subject,verbose=False).reshape([-1,locate*3])
+                assert tmp.shape[0]==3 and tmp.shape[1]==ns*self.locate, tmp.shape
+                tmp = tmp.T.reshape([self.locate,ns,3])
+                tmp = numpy.transpose(tmp,(1,0,2)).reshape([-1,self.locate*3])
+                loc[ind_s,: ,:] = tmp
             ind_s+=1
+                
         qtrue_all = loc
         p=loc.shape[2]
         return qtrue_all, p
@@ -583,7 +646,7 @@ def ttv(total,test_frac,val_frac,batch_frac,rand_test=True):
     assert np.intersect1d(batch,test).size is 0
     assert np.intersect1d(batch,val).size is 0
 
-    print "Train batch ", batch_num, batch
+    print "Train batch ", batch_num#, batch
     prob_select*=float(total-test_size-val_size-batch_size*batch_num)/float(total-test_size-val_size-batch_size*(batch_num+1))
     prob_select[batch]=0.
     batch_list = [batch]
@@ -597,7 +660,7 @@ def ttv(total,test_frac,val_frac,batch_frac,rand_test=True):
         assert np.intersect1d(batch,test).size is 0
         assert np.intersect1d(batch,val).size is 0
 
-        print "Train batch ", batch_num, batch
+        print "Train batch ", batch_num#, batch
         if batch_num<batches-1:
             prob_select*=float(total-test_size-val_size-batch_size*batch_num)/float(total-test_size-val_size-batch_size*(batch_num+1))
             prob_select[batch]=0.
@@ -606,3 +669,95 @@ def ttv(total,test_frac,val_frac,batch_frac,rand_test=True):
     print "Batches: ", batches, " Batches*batch_size: ", batches*batch_size, " Train set size: ",(total-val_size-test_size)
 
     return test, val, batch_list, batches
+            
+def location_rat(locate,batch_size,n_steps,p,dipole, dipole_xyz):
+    qtrue_all = np.zeros([batch_size,n_steps,p])
+    for s in range(0,dipole.shape[2]):
+        mxloca = np.argsort(np.abs(dipole[:,:,s]),axis=0)#dipole is pxnxb
+        mxloc=mxloca[-1-locate:-1,:]#locatexn
+        loc=dipole_xyz[np.ravel(mxloc),:]#locate*nx3
+        loc=np.transpose(loc.reshape([-1,n_steps,3]),(1,0,2)).reshape([-1,locate*3])#nx3*locate=nxp
+        qtrue_all[s,:,:]=loc#m
+    return qtrue_all*1000#mm
+
+def location_rat_XYZT(locate,batch_size,n_steps,p,dipole, dipole_xyz):
+    qtrue_all = np.zeros([batch_size,n_steps,p])
+    for s in range(0,dipole.shape[2]):
+        #max location (index)
+        [i,j] = np.unravel_index(np.argsort(np.ravel(np.abs(dipole[:,:,s]))),dipole[:,:,s].shape)
+        I,J=i[-1-locate:-1],j[-1-locate:-1]#I is neuron index,J is temporal index
+        loc=dipole_xyz[I,:]#locatex3
+        loc=loc.reshape([-1])#->locate*3
+        qtrue_all[s,-1,:]=loc#m
+    return qtrue_all*1000.#mm
+
+def rat_prepro(n_chan_in,dipole,dipole_xyz,meg_data,meg_xyz, eeg_data,eeg_xyz, meas_dims, n_steps, batch_size,subject,selection='all',pca=True,subsample=1,justdims=False,cnn=True,locate=True,rnn=False,Wt=None):
+
+    if locate is True:
+        p=3
+    elif locate>0:
+        p=3*locate                
+    else:
+        p=instance.p
+
+    tf_meas = meas_class.meas(meg_data,meg_xyz, eeg_data,eeg_xyz, meas_dims, n_steps, batch_size)
+    if pca is True:
+        Wt=tf_meas.pca(Wt = Wt)
+    elif pca is False:
+        tf_meas.scale()
+    else:
+        pass
+
+    if n_chan_in is 2:
+        if cnn is True:    
+            print "Image grid dimensions: ", meas_dims
+            tf_meas.interp()
+            tf_meas.reshape()
+            meas_img_all = tf_meas.meas_img
+            m =tf_meas.m
+            
+        else:
+            tf_meas.stack_reshape(n_chan_in=n_chan_in)
+            meas_img_all = tf_meas.meas_stack
+            m =tf_meas.m0+tf_meas.m1
+            meas_dims=m
+    elif n_chan_in is 1:
+        if cnn is True:    
+            print "Image grid dimensions: ", meas_dims
+            tf_meas.interp()
+            tf_meas.reshape()
+            meas_img_all = np.expand_dims(tf_meas.meas_img[:,:,:,:,0],axis=-1)
+            m =tf_meas.m
+        else:
+            tf_meas.stack_reshape(n_chan_in=n_chan_in)
+            meas_img_all = tf_meas.meas_stack
+            m =tf_meas.m0
+            meas_dims=m
+
+    if locate is not False:
+        if rnn is True or cnn is 'fft':
+            qtrue_all=location_rat_XYZT(locate,batch_size,n_steps,p,dipole, dipole_xyz)
+        else:
+            qtrue_all=location_rat(locate,batch_size,n_steps,p,dipole, dipole_xyz)
+    else:
+        if rnn is True or cnn is 'fft':
+            #pxn_stepsxbatchsize
+            qtrue_all,p=meas_class.scale_dipoleXYZT_OH(dipole,subsample=subsample)    
+            #bxnxp
+        else:
+            #pxn_stepsxbatchsize
+            qtrue_all,p=meas_class.scale_dipole(dipole,subsample=subsample)    
+            #bxnxp
+
+    assert qtrue_all.shape == (batch_size,n_steps,p), str(qtrue_all.shape)+' '+str((batch_size,n_steps,p))
+    if cnn is True:
+        assert meas_img_all.shape == (batch_size,n_steps,meas_dims[0],meas_dims[1],1), str(meas_img_all.shape)+' '+ str((batch_size,n_steps,meas_dims[0],meas_dims[1],1))
+    else:
+        assert meas_img_all.shape == (batch_size,n_steps,m), str(meas_img_all.shape)+' '+str((batch_size,n_steps,m))
+        
+    if justdims is True:
+        return meas_dims, m, p, n_steps, batch_size, Wt
+    else:
+        return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, batch_size, Wt 
+
+    

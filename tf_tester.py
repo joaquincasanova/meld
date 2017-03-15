@@ -1,7 +1,6 @@
 import numpy as np
 from numpy import matlib
 import sphere
-import dipole_class_xyz
 import tensorflow as tf
 import meld_net
 import csv
@@ -47,23 +46,25 @@ learning_rate = 0.005
 dropout = 1.
 beta = 0.
 
-for locate in [95,10,1]:
+for locate in [1]:
     subsample = 1
     if locate  is False:
         subsample=20
-    for cnn in [True,False]:
+    for cnn in [False]:
         if cnn is 'fft':
             params_list = [[25,2,3,100,3,.2,.2,.2]]
         else:
             params_list = [[3,3,5,10,3,.2,.2,.2]]
 
-        for rnn in [False,True]:
-            for subject_id in ['aud']:
+        for rnn in [False]:
+            for subject_id in ['aud','rat']:
                 if subject_id is 'aud':
-                    treats=['left/auditory', 'right/auditory', 'left/visual', 'right/visual',None]
+                    treats=[None]#,'left/auditory', 'right/auditory', 'left/visual', 'right/visual']
+                elif subject_id is 'rat':
+                    treats=[None]
                 else:
-                    treats=['face/famous','scrambled','face/unfamiliar']
-                treats=[None]
+                    treats=[None]#,'face/famous','scrambled','face/unfamiliar']
+                
                 for treat in treats:
                     if treat is not None:
                         lab_treat=treat.replace("/","_")
@@ -73,7 +74,7 @@ for locate in [95,10,1]:
                     print 'Subject: ',subject_id,' PCA: ',pca,' Random: ',rand_test, ' CNN: ',cnn, ' RNN: ',rnn, 'Locate: ',locate, 'Treat: ',lab_treat
 
                     fieldnames=['batches','learning rate','batch_size','per_batch','dropout','beta','k_conv','n_conv1','n_conv2','n_layer','n_lstm','n_steps','train step','cost']
-                    name='./data/fix_subject_%s_pca_all_%s_rand_%s_cnn_%s_rnn_%s_locate_%s_treat_%s' % (subject_id, pca, rand_test, cnn, rnn,locate,lab_treat)
+                    name='./data/subject_%s_pca_all_%s_rand_%s_cnn_%s_rnn_%s_locate_%s_treat_%s' % (subject_id, pca, rand_test, cnn, rnn,locate,lab_treat)
                     fname = name + '.csv' 
 
                     with open(fname,'a') as csvfile:
@@ -81,35 +82,49 @@ for locate in [95,10,1]:
                         writer.writeheader()
 
                         for [k_conv, n_conv1, n_conv2, n_lstm, n_layer, test_frac, val_frac, batch_frac] in params_list:
-                            if subject_id is 'aud':
-                                meas_dims, m, p, n_steps, total_batch_size,Wt = nn_prepro.aud_dataset(justdims=True,cnn=cnn,locate=locate,treat=None)
-                                meas_dims, m, p, n_steps, total_batch_size,Wt = nn_prepro.aud_dataset(justdims=True,cnn=cnn,locate=locate,treat=treat,Wt=Wt)
-                            else:
-                                meas_dims, m, p, n_steps, total_batch_size,Wt = nn_prepro.faces_dataset(subject_id,cnn=cnn,justdims=True,locate=locate,treat=None)
-                                meas_dims, m, p, n_steps, total_batch_size,Wt = nn_prepro.faces_dataset(subject_id,cnn=cnn,justdims=True,locate=locate,treat=treat,Wt=Wt)
 
-                            if cnn is 'fft':
+                            if cnn is 'fft' or subject_id is 'rat':
                                 n_chan_in=1
                             else:
                                 n_chan_in=2
 
+                            if subject_id is 'aud':
+                                meas_dims, m, p, n_steps, total_batch_size,Wt = nn_prepro.aud_dataset(justdims=True,cnn=cnn,locate=locate,treat=None)
+                                meas_dims, m, p, n_steps, total_batch_size,Wt = nn_prepro.aud_dataset(justdims=True,cnn=cnn,locate=locate,treat=treat,Wt=Wt)
+                            elif subject_id is 'rat':
+                                total_batch_size=1000
+                                delT=1e-2
+                                n_steps=100
+                                meas_dims_in=[4,1]
+                                dipole_dims=[1,2,2]
+                                if cnn is True:
+                                    assert k_conv<np.min(meas_dims), "Kconv must be less than image size."
+                                meas_dims, m, p, n_steps, total_batch_size, Wt = nn_prepro.rat_synth(total_batch_size,delT,n_steps,meas_dims_in,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True,selection='all',pca=True,subsample=1,justdims=True,cnn=cnn,locate=locate,treat=None,rnn=rnn,Wt=None)
+                                meas_dims, m, p, n_steps, total_batch_size, Wt = nn_prepro.rat_synth(total_batch_size,delT,n_steps,meas_dims_in,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True,selection='all',pca=True,subsample=1,justdims=True,cnn=cnn,locate=locate,treat=treat,rnn=rnn,Wt=Wt)
+                            else:
+                                meas_dims, m, p, n_steps, total_batch_size,Wt = nn_prepro.faces_dataset(subject_id,cnn=cnn,justdims=True,locate=locate,treat=None)
+                                meas_dims, m, p, n_steps, total_batch_size,Wt = nn_prepro.faces_dataset(subject_id,cnn=cnn,justdims=True,locate=locate,treat=treat,Wt=Wt)
 
                             test, val, batch_list, batches = nn_prepro.ttv(total_batch_size,test_frac,val_frac,batch_frac,rand_test=rand_test)
 
                             per_batch = int(5000/batches)
                             if subject_id is 'aud':
                                 meas_img_test, qtrue_test, meas_dims, m, p, n_steps, test_size,Wt = nn_prepro.aud_dataset(selection=test,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,Wt=Wt)
+                            elif subject_id is 'rat':
+                                meas_img_test, qtrue_test, meas_dims, m, p, n_steps, test_size,Wt = nn_prepro.rat_synth(total_batch_size,delT,n_steps,meas_dims_in,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True,selection=test,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,rnn=rnn,Wt=Wt)
                             else:
                                 meas_img_test, qtrue_test, meas_dims, m, p, n_steps, test_size,Wt = nn_prepro.faces_dataset(subject_id,selection=test,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,Wt=Wt)
                             #pick a test batch
-                            print "Test batch ",test
+                            print "Test batch "#,test
 
                             if subject_id is 'aud':
                                 meas_img_val, qtrue_val, meas_dims, m, p, n_steps, val_size,Wt = nn_prepro.aud_dataset(selection=val,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,Wt=Wt)
+                            elif subject_id is 'rat':
+                                meas_img_val, qtrue_val, meas_dims, m, p, n_steps, val_size,Wt = nn_prepro.rat_synth(total_batch_size,delT,n_steps,meas_dims_in,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True,selection=val,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,rnn=rnn,Wt=Wt)
                             else:
                                 meas_img_val, qtrue_val, meas_dims, m, p, n_steps, val_size,Wt = nn_prepro.faces_dataset(subject_id,selection=val,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,Wt=Wt)
                             #pick a val batch
-                            print "Val batch ",val
+                            print "Val batch "#,val
 
                             n_out=p
                             k_pool=1
@@ -124,7 +139,7 @@ for locate in [95,10,1]:
                             nn.initializer()     
 
                             with tf.Session() as session:
-                                logdir = '/tmp/tensorflowlogs/fix_sub_%s/11x11/pca_all_%s/rand_%s/cnn_%s/rnn_%s/locate_knn_%s/treat_%s/' % (subject_id,pca,rand_test,cnn,rnn,locate,lab_treat)
+                                logdir = '/tmp/tensorflowlogs/sub_%s/pca_all_%s/rand_%s/cnn_%s/rnn_%s/locate_knn_%s/treat_%s/' % (subject_id,pca,rand_test,cnn,rnn,locate,lab_treat)
                                 if tf.gfile.Exists(logdir):
                                     tf.gfile.DeleteRecursively(logdir)
                                 tf.gfile.MakeDirs(logdir)
@@ -136,10 +151,12 @@ for locate in [95,10,1]:
                                     err_l_prev = 1000.
                                     err_l = 500.
                                     batch = batch_list[batch_num]
-                                    print "Train batch ", batch_num, batch
+                                    print "Train batch ", batch_num#, batch
                                     #pick a first batch of batch_size
                                     if subject_id is 'aud':
                                         meas_img, qtrue, meas_dims, m, p, n_steps, batch_size,Wt = nn_prepro.aud_dataset(selection=batch,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,Wt=Wt)
+                                    elif subject_id is 'rat':
+                                        meas_img, qtrue, meas_dims, m, p, n_steps, batch_size,Wt = nn_prepro.rat_synth(total_batch_size,delT,n_steps,meas_dims_in,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True,selection=batch,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,rnn=rnn,Wt=Wt)
                                     else:
                                         meas_img, qtrue, meas_dims, m, p, n_steps, batch_size,Wt = nn_prepro.faces_dataset(subject_id,selection=batch,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,Wt=Wt)
 
