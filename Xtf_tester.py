@@ -56,8 +56,8 @@ for locate in [1]:
         else:
             params_list = [[3,3,5,10,3,.2,.2,.2]]
 
-        for rnn in [False,True]:
-            for subject_id in ['rat','aud']:
+        for rnn in [False]:
+            for subject_id in ['aud','rat']:
                 if subject_id is 'aud':
                     treats=[None,'left/auditory', 'right/auditory', 'left/visual', 'right/visual']
                 elif subject_id is 'rat':

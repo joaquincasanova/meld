@@ -252,11 +252,24 @@ def location(stc,subject,selection='all',locate=True):
             assert mxloc.shape[0]==locate and mxloc.shape[1]==ns
             hemi = np.where(mxloc<nd/2,0,1).reshape([-1])
             mxvtx_long =vtx_long[mxloc].reshape([-1])
+            #if subject is 'sample':
+            #    loc[s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,subjects_dir='/home/jcasa/mne_data/MNE-sample-data/subjects',verbose=False).reshape([-1,locate*3])
+            #else:
+            #    loc[s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,verbose=False).reshape([-1,locate*3])
             if subject is 'sample':
-                loc[s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,subjects_dir='/home/jcasa/mne_data/MNE-sample-data/subjects',verbose=False).reshape([-1,locate*3])
+                #ns*locatex3
+                tmp = mne.vertex_to_mni(mxvtx_long,hemi,subject,subjects_dir='/home/jcasa/mne_data/MNE-sample-data/subjects',verbose=False)
+                assert tmp.shape[0]==3 and tmp.shape[1]==ns*self.locate, tmp.shape
+                tmp = tmp.T.reshape([self.locate,ns,3])
+                tmp = numpy.transpose(tmp,(1,0,2)).reshape([-1,self.locate*3])
+                loc[s,: ,:] = tmp
             else:
-                loc[s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,verbose=False).reshape([-1,locate*3])
-                
+                tmp = mne.vertex_to_mni(mxvtx_long,hemi,subject,verbose=False).reshape([-1,locate*3])
+                assert tmp.shape[0]==3 and tmp.shape[1]==ns*self.locate, tmp.shape
+                tmp = tmp.T.reshape([self.locate,ns,3])
+                tmp = numpy.transpose(tmp,(1,0,2)).reshape([-1,self.locate*3])
+                loc[s,: ,:] = tmp
+            
         qtrue_all = loc
         p=loc.shape[2]
         return qtrue_all, p
@@ -277,11 +290,26 @@ def location(stc,subject,selection='all',locate=True):
             assert mxloc.shape[0]==locate and mxloc.shape[1]==ns
             hemi = np.where(mxloc<nd/2,0,1).reshape([-1])
             mxvtx_long =vtx_long[mxloc].reshape([-1])
+            #if subject is 'sample':
+            #    loc[ind_s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,subjects_dir='/home/jcasa/mne_data/MNE-sample-data/subjects',verbose=False).reshape([-1,locate*3])
+            #else:
+            #    loc[ind_s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,verbose=False).reshape([-1,locate*3])
+            #ind_s+=1
             if subject is 'sample':
-                loc[ind_s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,subjects_dir='/home/jcasa/mne_data/MNE-sample-data/subjects',verbose=False).reshape([-1,locate*3])
+                #ns*locatex3
+                tmp = mne.vertex_to_mni(mxvtx_long,hemi,subject,subjects_dir='/home/jcasa/mne_data/MNE-sample-data/subjects',verbose=False)
+                assert tmp.shape[0]==3 and tmp.shape[1]==ns*self.locate, tmp.shape
+                tmp = tmp.T.reshape([self.locate,ns,3])
+                tmp = numpy.transpose(tmp,(1,0,2)).reshape([-1,self.locate*3])
+                loc[ind_s,: ,:] = tmp
             else:
-                loc[ind_s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,verbose=False).reshape([-1,locate*3])
+                tmp = mne.vertex_to_mni(mxvtx_long,hemi,subject,verbose=False).reshape([-1,locate*3])
+                assert tmp.shape[0]==3 and tmp.shape[1]==ns*self.locate, tmp.shape
+                tmp = tmp.T.reshape([self.locate,ns,3])
+                tmp = numpy.transpose(tmp,(1,0,2)).reshape([-1,self.locate*3])
+                loc[ind_s,: ,:] = tmp
             ind_s+=1
+                
         qtrue_all = loc
         p=loc.shape[2]
         return qtrue_all, p
