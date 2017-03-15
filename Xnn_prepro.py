@@ -12,7 +12,7 @@ from mne.minimum_norm import (make_inverse_operator, apply_inverse,
                               write_inverse_operator, apply_inverse_epochs,
                               read_inverse_operator)
 
-def rat_synth(selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=True,treat=None,rnn=True,Wt=None,total_batch_size,delT,n_steps,meas_dims,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True):
+def rat_synth(total_batch_size,delT,n_steps,meas_dims,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True,selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=True,treat=None,rnn=True,Wt=None):
     
     if selection is 'all':
         batch_size=total_batch_size
@@ -124,7 +124,7 @@ def aud_dataset(selection='all',pca=False,subsample=1,justdims=True,cnn=True,loc
     if Wt is None:
         print 'Precalculate PCA weights:'
         #weight PCA matrix. Uses 'treat' - so to apply across all treatments, use treat=None
-        Wt=Wt_calc(stc,epochs_eeg,epochs_meg)
+        Wt=Wt_calc(stc,epochs_eeg,epochs_meg,[11,11])
         
     #stc.save('sample_audvis-source-epochs')
  
@@ -177,7 +177,7 @@ def faces_dataset(subject_id,selection='all',pca=False,subsample=1,justdims=True
     if Wt is None:
         print 'Precalculate PCA weights:'
         #weight PCA matrix. Uses 'treat' - so to apply across all treatments, use treat=None
-        Wt=Wt_calc(stc,epochs_eeg,epochs_meg)
+        Wt=Wt_calc(stc,epochs_eeg,epochs_meg,[11,11])
         
     if justdims is True:
         meas_dims, m, p, n_steps, total_batch_size, Wt = prepro(stc, epochs, epochs_eeg,epochs_meg,subject,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate,rnn=rnn,Wt=Wt)
@@ -210,11 +210,10 @@ def prepro(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=False,
             meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size, Wt = xcnn_xjustdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate,rnn=rnn,Wt=Wt)
             return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size, Wt
 
-def Wt_calc(stc,epochs_eeg,epochs_meg):
+def Wt_calc(stc,epochs_eeg,epochs_meg,meas_dims):
     total_batch_size = len(stc)#number of events. we'll consider each event an example.
 
     n_steps = stc[0]._data.shape[1]
-    meas_dims=[11,11]
     
     n_eeg = epochs_eeg.get_data().shape[1]
 
@@ -650,8 +649,8 @@ def location_rat(locate,batch_size,n_steps,p,dipole, dipole_xyz):
         mxloc=mxloca[-1-locate:-1,:]#locatexn
         loc=dipole_xyz[np.ravel(mxloc),:]#locate*nx3
         loc=np.transpose(loc.reshape([-1,n_steps,3]),(1,0,2)).reshape([-1,locate*3])#nx3*locate=nxp
-        qtrue_all[s,:,:]=loc*1000.#mm
-    return qtrue_all
+        qtrue_all[s,:,:]=loc#m
+    return qtrue_all*1000#mm
 
 def location_rat_XYZT(locate,batch_size,n_steps,p,dipole, dipole_xyz):
     qtrue_all = np.zeros([batch_size,n_steps,p])
@@ -661,8 +660,8 @@ def location_rat_XYZT(locate,batch_size,n_steps,p,dipole, dipole_xyz):
         I,J=i[-1-locate:-1],j[-1-locate:-1]#I is neuron index,J is temporal index
         loc=dipole_xyz[I,:]#locatex3
         loc=loc.reshape([-1])#->locate*3
-        qtrue_all[s,-1,:]=loc*1000.#mm
-    return qtrue_all
+        qtrue_all[s,-1,:]=loc#m
+    return qtrue_all*1000.#mm
 
 def rat_prepro(n_chan_in,dipole,dipole_xyz,meg_data,meg_xyz, eeg_data,eeg_xyz, meas_dims, n_steps, batch_size,subject,selection='all',pca=True,subsample=1,justdims=False,cnn=True,locate=True,rnn=False,Wt=None):
 
@@ -688,9 +687,12 @@ def rat_prepro(n_chan_in,dipole,dipole_xyz,meg_data,meg_xyz, eeg_data,eeg_xyz, m
             tf_meas.reshape()
             meas_img_all = tf_meas.meas_img
             m =tf_meas.m
+            
         else:
-            meas_img_all = np.vstack((tf_meas.meas_in[0],tf_meas.meas_in[1]))
+            tf_meas.stack_reshape(n_chan_in=n_chan_in)
+            meas_img_all = tf_meas.meas_stack
             m =tf_meas.m0+tf_meas.m1
+            meas_dims=m
     elif n_chan_in is 1:
         if cnn is True:    
             print "Image grid dimensions: ", meas_dims
@@ -699,14 +701,16 @@ def rat_prepro(n_chan_in,dipole,dipole_xyz,meg_data,meg_xyz, eeg_data,eeg_xyz, m
             meas_img_all = np.expand_dims(tf_meas.meas_img[:,:,:,:,0],axis=-1)
             m =tf_meas.m
         else:
-            meas_img_all = np.vstack((tf_meas.meas_in[0]))
+            tf_meas.stack_reshape(n_chan_in=n_chan_in)
+            meas_img_all = tf_meas.meas_stack
             m =tf_meas.m0
+            meas_dims=m
 
     if locate is not False:
         if rnn is True or cnn is 'fft':
-            location_rat_XYZT()
+            qtrue_all=location_rat_XYZT(locate,batch_size,n_steps,p,dipole, dipole_xyz)
         else:
-            location_rat()
+            qtrue_all=location_rat(locate,batch_size,n_steps,p,dipole, dipole_xyz)
     else:
         if rnn is True or cnn is 'fft':
             #pxn_stepsxbatchsize
@@ -716,8 +720,16 @@ def rat_prepro(n_chan_in,dipole,dipole_xyz,meg_data,meg_xyz, eeg_data,eeg_xyz, m
             #pxn_stepsxbatchsize
             qtrue_all,p=meas_class.scale_dipole(dipole,subsample=subsample)    
             #bxnxp
-    
-    if justdims is True:
-        return meas_dims, m, p, n_steps, total_batch_size, Wt
+
+    assert qtrue_all.shape == (batch_size,n_steps,p), str(qtrue_all.shape)+' '+str((batch_size,n_steps,p))
+    if cnn is True:
+        assert meas_img_all.shape == (batch_size,n_steps,meas_dims[0],meas_dims[1],1), str(meas_img_all.shape)+' '+ str((batch_size,n_steps,meas_dims[0],meas_dims[1],1))
     else:
-        return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size, Wt 
+        assert meas_img_all.shape == (batch_size,n_steps,m), str(meas_img_all.shape)+' '+str((batch_size,n_steps,m))
+        
+    if justdims is True:
+        return meas_dims, m, p, n_steps, batch_size, Wt
+    else:
+        return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, batch_size, Wt 
+
+    

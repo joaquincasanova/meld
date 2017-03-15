@@ -46,18 +46,18 @@ learning_rate = 0.005
 dropout = 1.
 beta = 0.
 
-for locate in [95,10,1]:
+for locate in [1]:
     subsample = 1
     if locate  is False:
         subsample=20
-    for cnn in [True,False]:
+    for cnn in [False]:
         if cnn is 'fft':
             params_list = [[25,2,3,100,3,.2,.2,.2]]
         else:
             params_list = [[3,3,5,10,3,.2,.2,.2]]
 
         for rnn in [False,True]:
-            for subject_id in ['rat']:
+            for subject_id in ['rat','aud']:
                 if subject_id is 'aud':
                     treats=[None,'left/auditory', 'right/auditory', 'left/visual', 'right/visual']
                 elif subject_id is 'rat':
@@ -95,12 +95,15 @@ for locate in [95,10,1]:
                                 total_batch_size=1000
                                 delT=1e-2
                                 n_steps=100
-                                meas_dims, m, p, n_steps, total_batch_size, Wt = rat_synth(selection='all',pca=True,subsample=1,justdims=subsample,cnn=cnn,locate=locate,treat=None,rnn=rnn,Wt=None,total_batch_size,delT,n_steps,meas_dims,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True)
-                                meas_dims, m, p, n_steps, total_batch_size, Wt = rat_synth(selection='all',pca=True,subsample=1,justdims=subsample,cnn=cnn,locate=locate,treat=treat,rnn=rnn,Wt=Wt,total_batch_size,delT,n_steps,meas_dims,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True)
+                                meas_dims_in=[4,1]
+                                dipole_dims=[1,2,2]
+                                if cnn is True:
+                                    assert k_conv<np.min(meas_dims), "Kconv must be less than image size."
+                                meas_dims, m, p, n_steps, total_batch_size, Wt = nn_prepro.rat_synth(total_batch_size,delT,n_steps,meas_dims_in,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True,selection='all',pca=True,subsample=1,justdims=True,cnn=cnn,locate=locate,treat=None,rnn=rnn,Wt=None)
+                                meas_dims, m, p, n_steps, total_batch_size, Wt = nn_prepro.rat_synth(total_batch_size,delT,n_steps,meas_dims_in,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True,selection='all',pca=True,subsample=1,justdims=True,cnn=cnn,locate=locate,treat=treat,rnn=rnn,Wt=Wt)
                             else:
                                 meas_dims, m, p, n_steps, total_batch_size,Wt = nn_prepro.faces_dataset(subject_id,cnn=cnn,justdims=True,locate=locate,treat=None)
                                 meas_dims, m, p, n_steps, total_batch_size,Wt = nn_prepro.faces_dataset(subject_id,cnn=cnn,justdims=True,locate=locate,treat=treat,Wt=Wt)
-
 
                             test, val, batch_list, batches = nn_prepro.ttv(total_batch_size,test_frac,val_frac,batch_frac,rand_test=rand_test)
 
@@ -108,7 +111,7 @@ for locate in [95,10,1]:
                             if subject_id is 'aud':
                                 meas_img_test, qtrue_test, meas_dims, m, p, n_steps, test_size,Wt = nn_prepro.aud_dataset(selection=test,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,Wt=Wt)
                             elif subject_id is 'rat':
-                                meas_img_test, qtrue_test, meas_dims, m, p, n_steps, test_size,Wt = rat_synth(selection=test,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,rnn=rnn,Wt=Wt,total_batch_size,delT,n_steps,meas_dims,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True)
+                                meas_img_test, qtrue_test, meas_dims, m, p, n_steps, test_size,Wt = nn_prepro.rat_synth(total_batch_size,delT,n_steps,meas_dims_in,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True,selection=test,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,rnn=rnn,Wt=Wt)
                             else:
                                 meas_img_test, qtrue_test, meas_dims, m, p, n_steps, test_size,Wt = nn_prepro.faces_dataset(subject_id,selection=test,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,Wt=Wt)
                             #pick a test batch
@@ -117,7 +120,7 @@ for locate in [95,10,1]:
                             if subject_id is 'aud':
                                 meas_img_val, qtrue_val, meas_dims, m, p, n_steps, val_size,Wt = nn_prepro.aud_dataset(selection=val,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,Wt=Wt)
                             elif subject_id is 'rat':
-                                meas_img_val, qtrue_val, meas_dims, m, p, n_steps, val_size,Wt = rat_synth(selection=val,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,rnn=rnn,Wt=Wt,total_batch_size,delT,n_steps,meas_dims,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True)
+                                meas_img_val, qtrue_val, meas_dims, m, p, n_steps, val_size,Wt = nn_prepro.rat_synth(total_batch_size,delT,n_steps,meas_dims_in,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True,selection=val,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,rnn=rnn,Wt=Wt)
                             else:
                                 meas_img_val, qtrue_val, meas_dims, m, p, n_steps, val_size,Wt = nn_prepro.faces_dataset(subject_id,selection=val,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,Wt=Wt)
                             #pick a val batch
@@ -153,7 +156,7 @@ for locate in [95,10,1]:
                                     if subject_id is 'aud':
                                         meas_img, qtrue, meas_dims, m, p, n_steps, batch_size,Wt = nn_prepro.aud_dataset(selection=batch,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,Wt=Wt)
                                     elif subject_id is 'rat':
-                                        meas_img, qtrue, meas_dims, m, p, n_steps, batch_size,Wt = rat_synth(selection=batch,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,rnn=rnn,Wt=Wt,total_batch_size,delT,n_steps,meas_dims,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True)
+                                        meas_img, qtrue, meas_dims, m, p, n_steps, batch_size,Wt = nn_prepro.rat_synth(total_batch_size,delT,n_steps,meas_dims_in,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True,selection=batch,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,rnn=rnn,Wt=Wt)
                                     else:
                                         meas_img, qtrue, meas_dims, m, p, n_steps, batch_size,Wt = nn_prepro.faces_dataset(subject_id,selection=batch,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,Wt=Wt)
 

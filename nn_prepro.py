@@ -2,8 +2,7 @@ import os
 import numpy as np
 from numpy import matlib
 import sphere
-import dipole_class_xyz
-import tensorflow as tf
+import dipole_class_rat
 import csv
 import meas_class
 import mne
@@ -12,21 +11,6 @@ from mne.datasets import sample
 from mne.minimum_norm import (make_inverse_operator, apply_inverse,
                               write_inverse_operator, apply_inverse_epochs,
                               read_inverse_operator)
-class prepro:
-    def __init__(self,selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=True,treat=None,rnn=True,Wt=None):
-        self.selection=selection
-        self.pca=pca
-        self.subsample=subsample
-        self.justdims=justdims
-        self.cnn=cnn
-        self.locate=locate
-        self.treat=treat
-        self.rnn=rnn
-        self.Wt=Wt
-    def aud_dataset(self):
-        return
-    def faces_dataset(self):
-        return
     
 def aud_dataset(selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=True,treat=None,rnn=True,Wt=None):
     print 'Treat: ', treat

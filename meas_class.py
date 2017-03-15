@@ -145,11 +145,17 @@ class meas:
         for channel in [0,1]:
             self.meas_in[channel]=np.nan_to_num((self.meas_in[channel]-np.amin(self.meas_in[channel],axis=0))/(np.amax(self.meas_in[channel],axis=0)-np.amin(self.meas_in[channel],axis=0)))
 
-    def stack_reshape(self):
-        self.meas_stack=np.vstack((self.meas_in[0],self.meas_in[1]))#[m0+m1]xbatch_size*n_steps
-        self.m=self.m0+self.m1
-        self.meas_stack=self.meas_stack.reshape((self.m,self.batch_size,self.n_steps))#[m0+m1]xbatch_sizexn_steps
-        self.meas_stack=self.meas_stack.transpose((1,2,0))#batch_sizexn_stepsx[m0+m1]
+    def stack_reshape(self,n_chan_in=2):
+        if n_chan_in==2:
+            self.meas_stack=np.vstack((self.meas_in[0],self.meas_in[1]))#[m0+m1]xbatch_size*n_steps
+            self.m=self.m0+self.m1
+            self.meas_stack=self.meas_stack.reshape((self.m,self.batch_size,self.n_steps))#[m0+m1]xbatch_sizexn_steps
+            self.meas_stack=self.meas_stack.transpose((1,2,0))#batch_sizexn_stepsx[m0+m1]
+        else:
+            self.meas_stack=np.vstack((self.meas_in[0]))#[m0]xbatch_size*n_steps
+            self.m=self.m0
+            self.meas_stack=self.meas_stack.reshape((self.m,self.batch_size,self.n_steps))#[m0]xbatch_sizexn_steps
+            self.meas_stack=self.meas_stack.transpose((1,2,0))#batch_sizexn_stepsx[m0+m1]
 
     def interp(self):
         self.grid_xyz()
