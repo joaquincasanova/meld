@@ -1,11 +1,10 @@
 import numpy as np
 from numpy import matlib
 import sphere
-import dipole_class_xyz
 import tensorflow as tf
 import meld_net
 import csv
-import prepro_class
+import Xnn_prepro as nn_prepro
 import time
 import matplotlib.pyplot as plt
 
@@ -40,7 +39,7 @@ def pred_obs(guess,true,locate,name):
 
 pca = True
 rand_test = True
-plot_step = 1000
+plot_step = 500
 val_step = 100
 print_step = 10
 learning_rate = 0.005
@@ -57,29 +56,16 @@ for locate in [95,10,1]:
         else:
             params_list = [[3,3,5,10,3,.2,.2,.2]]
 
-        for rnn in [True,False]:
-            for subject_id in ['aud']:
+        for rnn in [False,True]:
+            for subject_id in ['rat']:
                 if subject_id is 'aud':
-                    treats=['left/auditory', 'right/auditory', 'left/visual', 'right/visual',None]
+                    treats=[None,'left/auditory', 'right/auditory', 'left/visual', 'right/visual']
+                elif subject_id is 'rat':
+                    treats=[None]
                 else:
-                    treats=['face/famous','scrambled','face/unfamiliar']
-                treats = [None]
-                prepro = prepro_class.prepro(selection='all',pca=pca,subsample=subsample,justdims=True,cnn=cnn,locate=locate,treat=None,rnn=rnn,Wt=None)
-                if subject_id is 'aud':
-                    prepro.aud_dataset()
-                else:
-                    prepro.faces_dataset(subject_id)
-
-                Wt = prepro.Wt#calculate with ALL
+                    treats=[None,'face/famous','scrambled','face/unfamiliar']
                 
                 for treat in treats:
-
-                    prepro = prepro_class.prepro(selection='all',pca=pca,subsample=subsample,justdims=True,cnn=cnn,locate=locate,treat=treat,rnn=rnn,Wt=Wt)
-                    if subject_id is 'aud':
-                        prepro.aud_dataset()
-                    else:
-                        prepro.faces_dataset(subject_id)        
-                    
                     if treat is not None:
                         lab_treat=treat.replace("/","_")
                     else:
@@ -97,36 +83,46 @@ for locate in [95,10,1]:
 
                         for [k_conv, n_conv1, n_conv2, n_lstm, n_layer, test_frac, val_frac, batch_frac] in params_list:
 
-                            test, val, batch_list, batches = prepro_class.ttv(prepro.total_batch_size,test_frac,val_frac,batch_frac,rand_test=rand_test)
-                          
-                            if cnn is 'fft':
+                            if cnn is 'fft' or subject_id is 'rat':
                                 n_chan_in=1
                             else:
                                 n_chan_in=2
 
-
-                            prepro = prepro_class.prepro(selection=test,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,rnn=rnn,Wt=Wt)
                             if subject_id is 'aud':
-                                prepro.aud_dataset()
+                                meas_dims, m, p, n_steps, total_batch_size,Wt = nn_prepro.aud_dataset(justdims=True,cnn=cnn,locate=locate,treat=None)
+                                meas_dims, m, p, n_steps, total_batch_size,Wt = nn_prepro.aud_dataset(justdims=True,cnn=cnn,locate=locate,treat=treat,Wt=Wt)
+                            elif subject_id is 'rat':
+                                total_batch_size=1000
+                                delT=1e-2
+                                n_steps=100
+                                meas_dims, m, p, n_steps, total_batch_size, Wt = rat_synth(selection='all',pca=True,subsample=1,justdims=subsample,cnn=cnn,locate=locate,treat=None,rnn=rnn,Wt=None,total_batch_size,delT,n_steps,meas_dims,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True)
+                                meas_dims, m, p, n_steps, total_batch_size, Wt = rat_synth(selection='all',pca=True,subsample=1,justdims=subsample,cnn=cnn,locate=locate,treat=treat,rnn=rnn,Wt=Wt,total_batch_size,delT,n_steps,meas_dims,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True)
                             else:
-                                prepro.faces_dataset(subject_id)
-                            meas_img_test = prepro.meas_img_all
-                            qtrue_test = prepro.qtrue_all
+                                meas_dims, m, p, n_steps, total_batch_size,Wt = nn_prepro.faces_dataset(subject_id,cnn=cnn,justdims=True,locate=locate,treat=None)
+                                meas_dims, m, p, n_steps, total_batch_size,Wt = nn_prepro.faces_dataset(subject_id,cnn=cnn,justdims=True,locate=locate,treat=treat,Wt=Wt)
 
-                            prepro = prepro_class.prepro(selection=val,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,rnn=rnn,Wt=Wt)
-                            if subject_id is 'aud':
-                                prepro.aud_dataset()
-                            else:
-                                prepro.faces_dataset(subject_id)
-                            meas_img_val = prepro.meas_img_all
-                            qtrue_val = prepro.qtrue_all
-                            p=prepro.p
-                            m=prepro.m
-                            n_steps=prepro.n_steps
-                            meas_dims=prepro.meas_dims
-                            
+
+                            test, val, batch_list, batches = nn_prepro.ttv(total_batch_size,test_frac,val_frac,batch_frac,rand_test=rand_test)
+
                             per_batch = int(5000/batches)
-                            
+                            if subject_id is 'aud':
+                                meas_img_test, qtrue_test, meas_dims, m, p, n_steps, test_size,Wt = nn_prepro.aud_dataset(selection=test,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,Wt=Wt)
+                            elif subject_id is 'rat':
+                                meas_img_test, qtrue_test, meas_dims, m, p, n_steps, test_size,Wt = rat_synth(selection=test,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,rnn=rnn,Wt=Wt,total_batch_size,delT,n_steps,meas_dims,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True)
+                            else:
+                                meas_img_test, qtrue_test, meas_dims, m, p, n_steps, test_size,Wt = nn_prepro.faces_dataset(subject_id,selection=test,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,Wt=Wt)
+                            #pick a test batch
+                            print "Test batch "#,test
+
+                            if subject_id is 'aud':
+                                meas_img_val, qtrue_val, meas_dims, m, p, n_steps, val_size,Wt = nn_prepro.aud_dataset(selection=val,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,Wt=Wt)
+                            elif subject_id is 'rat':
+                                meas_img_val, qtrue_val, meas_dims, m, p, n_steps, val_size,Wt = rat_synth(selection=val,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,rnn=rnn,Wt=Wt,total_batch_size,delT,n_steps,meas_dims,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True)
+                            else:
+                                meas_img_val, qtrue_val, meas_dims, m, p, n_steps, val_size,Wt = nn_prepro.faces_dataset(subject_id,selection=val,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,Wt=Wt)
+                            #pick a val batch
+                            print "Val batch "#,val
+
                             n_out=p
                             k_pool=1
 
@@ -152,17 +148,15 @@ for locate in [95,10,1]:
                                     err_l_prev = 1000.
                                     err_l = 500.
                                     batch = batch_list[batch_num]
-                                    print "Train batch ", batch_num, batch
-
+                                    print "Train batch ", batch_num#, batch
                                     #pick a first batch of batch_size
-                                    prepro = prepro_class.prepro(selection=batch,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,rnn=rnn,Wt=Wt)
                                     if subject_id is 'aud':
-                                        prepro.aud_dataset()
+                                        meas_img, qtrue, meas_dims, m, p, n_steps, batch_size,Wt = nn_prepro.aud_dataset(selection=batch,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,Wt=Wt)
+                                    elif subject_id is 'rat':
+                                        meas_img, qtrue, meas_dims, m, p, n_steps, batch_size,Wt = rat_synth(selection=batch,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,rnn=rnn,Wt=Wt,total_batch_size,delT,n_steps,meas_dims,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True)
                                     else:
-                                        prepro.faces_dataset(subject_id)
-                                    meas_img = prepro.meas_img_all
-                                    qtrue = prepro.qtrue_all
-                                    batch_size = prepro.total_batch_size
+                                        meas_img, qtrue, meas_dims, m, p, n_steps, batch_size,Wt = nn_prepro.faces_dataset(subject_id,selection=batch,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,Wt=Wt)
+
                                     step=0
                                     while step<per_batch:
                                         run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
@@ -172,15 +166,15 @@ for locate in [95,10,1]:
                                             train_summary, _ , guess,true,cost = session.run([nn.train_summary, nn.train_step, nn.qhat, nn.qtrain_unflat, nn.cost],feed_dict={nn.qtrainPH: qtrue, nn.measPH: meas_img, nn.dropoutPH: dropout, nn.betaPH: beta})
                                         else:
                                             train_summary, _ , guess,true,cost = session.run([nn.train_summary, nn.train_step, nn.qhat_last, nn.qtrain_last, nn.cost],feed_dict={nn.qtrainPH: qtrue, nn.measPH: meas_img, nn.dropoutPH: dropout, nn.betaPH: beta})
-                                        
+
                                         if step % print_step==0:
                                             print "Train Step: ", step, "Cost: ",cost
 
                                         if step % plot_step==0:
 
                                             if locate is True: locate=1
-                                            if locate>0:
-                                                pred_obs(guess, true, locate,name+str(step))
+                                            #if locate>0:
+                                                #pred_obs(guess, true, locate,name+str(step))
                                                 
 
                                         writer.writerow({'batches':batches,'learning rate':learning_rate,'batch_size':batch_size,'per_batch':per_batch,'dropout':dropout,'beta':beta,'k_conv':k_conv,'n_conv1':n_conv1,'n_conv2':n_conv2,'n_layer':n_layer,'n_steps':n_steps,'n_lstm':n_lstm,'train step':step,'cost':cost})

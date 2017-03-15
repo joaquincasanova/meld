@@ -2,17 +2,53 @@ import os
 import numpy as np
 from numpy import matlib
 import sphere
-import dipole_class_xyz
-import tensorflow as tf
+import dipole_class_rat
 import csv
-import Xmeas_class as meas_class
+import meas_class
 import mne
 import sphere
 from mne.datasets import sample
 from mne.minimum_norm import (make_inverse_operator, apply_inverse,
                               write_inverse_operator, apply_inverse_epochs,
                               read_inverse_operator)
-def aud_dataset(selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=True,treat=None,rnn=True):
+
+def rat_synth(selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=True,treat=None,rnn=True,Wt=None,total_batch_size,delT,n_steps,meas_dims,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True):
+    
+    if selection is 'all':
+        batch_size=total_batch_size
+    else:
+        batch_size=len(selection)
+    subject='rat'
+    
+    instance = dipole_class_rat.dipole(delT, batch_size, n_steps,
+                      2, meas_dims, dipole_dims,
+                      orient=orient, noise_flag=noise_flag,
+                      dipole_xyz=dipole_xyz, meas_xyz=meas_xyz,pca=pca)
+    instance.batch_sequence_gen()
+
+    meg_data=instance.meg_data
+    eeg_data=instance.eeg_data
+    dipole=instance.qtrue
+    m=instance.m
+    p=instance.p
+    meg_xyz=instance.meg_xyz
+    assert meg_xyz.shape[0]==m and meg_xyz.shape[1]==3, meg_xyz.shape
+    eeg_xyz=instance.eeg_xyz
+    assert eeg_xyz.shape[0]==m and eeg_xyz.shape[1]==3, eeg_xyz.shape
+
+    dipole_xyz=instance.dipole_xyz
+    assert dipole_xyz.shape[0]==p and dipole_xyz.shape[1]==3, dipole_xyz.shape
+    n_steps=instance.n_steps
+    batch_size=instance.batch_size
+    
+    if justdims is True:
+        meas_dims, m, p, n_steps, batch_size, Wt = rat_prepro(n_chan_in,dipole,dipole_xyz,meg_data,meg_xyz, eeg_data,eeg_xyz, meas_dims, n_steps, batch_size,subject,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate,rnn=rnn,Wt=Wt)
+        return meas_dims, m, p, n_steps, batch_size, Wt
+    else:
+        meas_img_all, qtrue_all, meas_dims, m, p, n_steps, batch_size, Wt = rat_prepro(n_chan_in,dipole,dipole_xyz,meg_data,meg_xyz, eeg_data,eeg_xyz, meas_dims, n_steps, batch_size,subject,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate,rnn=rnn,Wt=Wt)
+        return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, batch_size, Wt 
+
+def aud_dataset(selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=True,treat=None,rnn=True,Wt=None):
     print 'Treat: ', treat
     ###############################################################################
     # Setup for reading the raw data
@@ -85,17 +121,21 @@ def aud_dataset(selection='all',pca=False,subsample=1,justdims=True,cnn=True,loc
     else:
         stc = apply_inverse_epochs(epochs, inverse_operator, lambda2,
                                    method=method, pick_ori=None,verbose=False)
+    if Wt is None:
+        print 'Precalculate PCA weights:'
+        #weight PCA matrix. Uses 'treat' - so to apply across all treatments, use treat=None
+        Wt=Wt_calc(stc,epochs_eeg,epochs_meg)
         
     #stc.save('sample_audvis-source-epochs')
  
     if justdims is True:
-        meas_dims, m, p, n_steps, total_batch_size = prepro(stc, epochs, epochs_eeg,epochs_meg,subject,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate,rnn=rnn)
-        return meas_dims, m, p, n_steps, total_batch_size
+        meas_dims, m, p, n_steps, total_batch_size, Wt = prepro(stc, epochs, epochs_eeg,epochs_meg,subject,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate,rnn=rnn,Wt=Wt)
+        return meas_dims, m, p, n_steps, total_batch_size, Wt
     else:
-        meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size = prepro(stc, epochs, epochs_eeg,epochs_meg,subject,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate,rnn=rnn)
-        return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size 
+        meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size, Wt = prepro(stc, epochs, epochs_eeg,epochs_meg,subject,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate,rnn=rnn,Wt=Wt)
+        return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size, Wt 
 
-def faces_dataset(subject_id,selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=True,treat=None,rnn=True):
+def faces_dataset(subject_id,selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=True,treat=None,rnn=True,Wt=None):
     print 'Treat: ', treat
     study_path = '/home/jcasa/mne_data/openfmri'
     subjects_dir = os.path.join(study_path, 'subjects')
@@ -133,36 +173,66 @@ def faces_dataset(subject_id,selection='all',pca=False,subsample=1,justdims=True
     else:
         stc = apply_inverse_epochs(epochs, inv, lambda2,
                                    method=method, pick_ori=None,verbose=False)
+        
+    if Wt is None:
+        print 'Precalculate PCA weights:'
+        #weight PCA matrix. Uses 'treat' - so to apply across all treatments, use treat=None
+        Wt=Wt_calc(stc,epochs_eeg,epochs_meg)
+        
     if justdims is True:
-        meas_dims, m, p, n_steps, total_batch_size = prepro(stc, epochs, epochs_eeg,epochs_meg,subject,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate,rnn=rnn)
-        return meas_dims, m, p, n_steps, total_batch_size
+        meas_dims, m, p, n_steps, total_batch_size, Wt = prepro(stc, epochs, epochs_eeg,epochs_meg,subject,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate,rnn=rnn,Wt=Wt)
+        return meas_dims, m, p, n_steps, total_batch_size, Wt
     else:
-        meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size = prepro(stc, epochs, epochs_eeg,epochs_meg,subject,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate,rnn=rnn)
-        return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size 
+        meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size,Wt = prepro(stc, epochs, epochs_eeg,epochs_meg,subject,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate,rnn=rnn,Wt=Wt)
+        return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size, Wt 
 
         
-def prepro(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=True,rnn=True):
+def prepro(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=True,rnn=True,Wt=None):
     if cnn is True:
         if justdims is True:
-            meas_dims, m, p, n_steps, total_batch_size = cnn_justdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate,rnn=rnn)
-            return meas_dims, m, p, n_steps, total_batch_size
+            meas_dims, m, p, n_steps, total_batch_size, Wt = cnn_justdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate,rnn=rnn,Wt=Wt)
+            return meas_dims, m, p, n_steps, total_batch_size, Wt
         else:
-            meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size = cnn_xjustdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate,rnn=rnn)
-            return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size
+            meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size, Wt = cnn_xjustdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate,rnn=rnn,Wt=Wt)
+            return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size, Wt
     elif cnn is 'fft':
         if justdims is True:
-            meas_dims, m, p, n_steps, total_batch_size = fftcnn_justdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate,rnn=rnn)
-            return meas_dims, m, p, n_steps, total_batch_size
+            meas_dims, m, p, n_steps, total_batch_size, Wt = fftcnn_justdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate,rnn=rnn,Wt=Wt)
+            return meas_dims, m, p, n_steps, total_batch_size, Wt
         else:
-            meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size = fftcnn_xjustdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate,rnn=rnn)
-            return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size
+            meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size, Wt = fftcnn_xjustdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate,rnn=rnn,Wt=Wt)
+            return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size, Wt
     else:
         if justdims is True:
-            meas_dims, m, p, n_steps, total_batch_size = xcnn_justdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate,rnn=rnn)
-            return meas_dims, m, p, n_steps, total_batch_size            
+            meas_dims, m, p, n_steps, total_batch_size, Wt = xcnn_justdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate,rnn=rnn,Wt=Wt)
+            return meas_dims, m, p, n_steps, total_batch_size, Wt            
         else:
-            meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size = xcnn_xjustdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate,rnn=rnn)
-            return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size
+            meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size, Wt = xcnn_xjustdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate,rnn=rnn,Wt=Wt)
+            return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size, Wt
+
+def Wt_calc(stc,epochs_eeg,epochs_meg):
+    total_batch_size = len(stc)#number of events. we'll consider each event an example.
+
+    n_steps = stc[0]._data.shape[1]
+    meas_dims=[11,11]
+    
+    n_eeg = epochs_eeg.get_data().shape[1]
+
+    eeg_xyz=np.squeeze(np.array([epochs_eeg.info['chs'][i]['loc'][:3].reshape([1,3]) for i in range(0,n_eeg)]))
+
+    n_meg = epochs_meg.get_data().shape[1]
+
+    meg_xyz=np.squeeze(np.array([epochs_meg.info['chs'][i]['loc'][:3].reshape([1,3]) for i in range(0,n_meg)]))
+
+    eeg_data = np.array(epochs_eeg.get_data())#batch_sizexmxn_steps
+
+    meg_data = np.array(epochs_meg.get_data())#batch_sizexmxn_steps
+
+    tf_meas = meas_class.meas(meg_data,meg_xyz, eeg_data,eeg_xyz, meas_dims, n_steps, total_batch_size)
+
+    Wt=tf_meas.pca()
+    
+    return Wt
 
 def location(stc,subject,selection='all',locate=True):
     if locate is True: locate=1
@@ -268,7 +338,7 @@ def locationXYZT(stc,subject,selection='all',locate=True):
         p=loc.shape[2]
         return qtrue_all, p
 
-def cnn_justdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=True,rnn=True):
+def cnn_justdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=True,rnn=True, Wt=None):
     total_batch_size = len(stc)#number of events. we'll consider each event an example.
     if locate is True:
         p=3
@@ -280,13 +350,10 @@ def cnn_justdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=
     meas_dims=[11,11]
     m = meas_dims[0]*meas_dims[1]
     del stc, epochs, epochs_eeg, epochs_meg
-    if locate is True:
-        p=3
-    elif locate > 0:
-        p=3*locate
-    return meas_dims, m, p, n_steps, total_batch_size
+    
+    return meas_dims, m, p, n_steps, total_batch_size, Wt
 
-def xcnn_justdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=True,rnn=True):
+def xcnn_justdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=True,rnn=True, Wt=None):
     total_batch_size = len(stc)#number of events. we'll consider each event an example.
     if locate is True:
         p=3
@@ -303,9 +370,9 @@ def xcnn_justdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca
     print "Meas dims in: ", meas_dims
     m = meas_dims
     del stc, epochs, epochs_eeg, epochs_meg
-    return meas_dims, m, p, n_steps, total_batch_size
+    return meas_dims, m, p, n_steps, total_batch_size,Wt
 
-def cnn_xjustdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=True,rnn=True):
+def cnn_xjustdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=True,rnn=True, Wt=None):
     if selection is 'all':
         total_batch_size = len(stc)#number of events. we'll consider each event an example.
     else:                
@@ -332,7 +399,7 @@ def cnn_xjustdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca
     print "Image grid dimensions: ", meas_dims
     tf_meas = meas_class.meas(meg_data,meg_xyz, eeg_data,eeg_xyz, meas_dims, n_steps, total_batch_size)
     if pca is True:
-        Wt=tf_meas.pca()
+        Wt=tf_meas.pca(Wt=Wt)
     elif pca is False:
         tf_meas.scale()
     else:
@@ -365,9 +432,9 @@ def cnn_xjustdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca
             qtrue_all,p=meas_class.scale_dipoleXYZT_OH(dipole,subsample=subsample)    
             #bxnxp
     del stc, epochs, epochs_eeg, epochs_meg
-    return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size 
+    return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size, Wt 
 
-def xcnn_xjustdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=True,rnn=True):
+def xcnn_xjustdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=True,rnn=True, Wt=None):
     if selection is 'all':
         total_batch_size = len(stc)#number of events. we'll consider each event an example.
     else:
@@ -394,7 +461,7 @@ def xcnn_xjustdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pc
     print "Meas dims in: ", meas_dims
     tf_meas = meas_class.meas(meg_data,meg_xyz, eeg_data,eeg_xyz, meas_dims, n_steps, total_batch_size)
     if pca is True:
-        tf_meas.pca()
+        Wt=tf_meas.pca(Wt=Wt)
     elif pca is False:
         tf_meas.scale()
     else:
@@ -424,9 +491,9 @@ def xcnn_xjustdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pc
             qtrue_all,p=meas_class.scale_dipoleXYZT_OH(dipole,subsample=subsample)    
             #bxnxp
     del stc, epochs, epochs_eeg, epochs_meg
-    return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size 
+    return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size, Wt 
 
-def fftcnn_justdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=True,rnn=True):
+def fftcnn_justdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=True,rnn=True, Wt=None):
     total_batch_size = len(stc)#number of events. we'll consider each event an example.
     if locate is True:
         p=3
@@ -443,9 +510,9 @@ def fftcnn_justdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',p
     print "Meas dims in: ", meas_dims
     m = meas_dims
     del stc, epochs, epochs_eeg, epochs_meg
-    return meas_dims, m, p, n_steps, total_batch_size
+    return meas_dims, m, p, n_steps, total_batch_size, Wt
 
-def fftcnn_xjustdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=True,rnn=True):
+def fftcnn_xjustdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=True,rnn=True, Wt=None):
     if selection is 'all':
         total_batch_size = len(stc)#number of evens. we'll consider each event an example.
     else:
@@ -472,19 +539,19 @@ def fftcnn_xjustdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',
     print "Meas dims in: ", meas_dims
     tf_meas = meas_class.meas(meg_data,meg_xyz, eeg_data,eeg_xyz, meas_dims, n_steps, total_batch_size)
     if pca is True:
-        tf_meas.pca()
+        Wt=tf_meas.pca(Wt=Wt)
     elif pca is False:
         tf_meas.scale()
     else:
         pass
 
     tf_meas.stack_reshape()
-    #ff=np.fft.fft(tf_meas.meas_stack,axis=1)
-    ff=tf_meas.meas_stack
+    ff=np.fft.fft(tf_meas.meas_stack,axis=1)
+    #ff=tf_meas.meas_stack
     
     #print ff.shape
-    #meas_img_all = np.expand_dims(np.abs(ff)*np.abs(ff),-1)
-    meas_img_all = np.expand_dims(ff,-1)
+    meas_img_all = np.expand_dims(np.abs(ff)*np.abs(ff),-1)
+    #meas_img_all = np.expand_dims(ff,-1)
 
 
     #print meas_img_all.shape
@@ -510,7 +577,7 @@ def fftcnn_xjustdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',
             qtrue_all,p=meas_class.scale_dipoleXYZT_OH(dipole,subsample=subsample)    
             #bxnxp
     del stc, epochs, epochs_eeg, epochs_meg
-    return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size 
+    return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size, Wt 
 
 def ttv(total,test_frac,val_frac,batch_frac,rand_test=True):
 
@@ -552,7 +619,7 @@ def ttv(total,test_frac,val_frac,batch_frac,rand_test=True):
     assert np.intersect1d(batch,test).size is 0
     assert np.intersect1d(batch,val).size is 0
 
-    print "Train batch ", batch_num, batch
+    print "Train batch ", batch_num#, batch
     prob_select*=float(total-test_size-val_size-batch_size*batch_num)/float(total-test_size-val_size-batch_size*(batch_num+1))
     prob_select[batch]=0.
     batch_list = [batch]
@@ -566,7 +633,7 @@ def ttv(total,test_frac,val_frac,batch_frac,rand_test=True):
         assert np.intersect1d(batch,test).size is 0
         assert np.intersect1d(batch,val).size is 0
 
-        print "Train batch ", batch_num, batch
+        print "Train batch ", batch_num#, batch
         if batch_num<batches-1:
             prob_select*=float(total-test_size-val_size-batch_size*batch_num)/float(total-test_size-val_size-batch_size*(batch_num+1))
             prob_select[batch]=0.
@@ -575,3 +642,82 @@ def ttv(total,test_frac,val_frac,batch_frac,rand_test=True):
     print "Batches: ", batches, " Batches*batch_size: ", batches*batch_size, " Train set size: ",(total-val_size-test_size)
 
     return test, val, batch_list, batches
+            
+def location_rat(locate,batch_size,n_steps,p,dipole, dipole_xyz):
+    qtrue_all = np.zeros([batch_size,n_steps,p])
+    for s in range(0,dipole.shape[2]):
+        mxloca = np.argsort(np.abs(dipole[:,:,s]),axis=0)#dipole is pxnxb
+        mxloc=mxloca[-1-locate:-1,:]#locatexn
+        loc=dipole_xyz[np.ravel(mxloc),:]#locate*nx3
+        loc=np.transpose(loc.reshape([-1,n_steps,3]),(1,0,2)).reshape([-1,locate*3])#nx3*locate=nxp
+        qtrue_all[s,:,:]=loc*1000.#mm
+    return qtrue_all
+
+def location_rat_XYZT(locate,batch_size,n_steps,p,dipole, dipole_xyz):
+    qtrue_all = np.zeros([batch_size,n_steps,p])
+    for s in range(0,dipole.shape[2]):
+        #max location (index)
+        [i,j] = np.unravel_index(np.argsort(np.ravel(np.abs(dipole[:,:,s]))),dipole[:,:,s].shape)
+        I,J=i[-1-locate:-1],j[-1-locate:-1]#I is neuron index,J is temporal index
+        loc=dipole_xyz[I,:]#locatex3
+        loc=loc.reshape([-1])#->locate*3
+        qtrue_all[s,-1,:]=loc*1000.#mm
+    return qtrue_all
+
+def rat_prepro(n_chan_in,dipole,dipole_xyz,meg_data,meg_xyz, eeg_data,eeg_xyz, meas_dims, n_steps, batch_size,subject,selection='all',pca=True,subsample=1,justdims=False,cnn=True,locate=True,rnn=False,Wt=None):
+
+    if locate is True:
+        p=3
+    elif locate>0:
+        p=3*locate                
+    else:
+        p=instance.p
+
+    tf_meas = meas_class.meas(meg_data,meg_xyz, eeg_data,eeg_xyz, meas_dims, n_steps, batch_size)
+    if pca is True:
+        Wt=tf_meas.pca(Wt = Wt)
+    elif pca is False:
+        tf_meas.scale()
+    else:
+        pass
+
+    if n_chan_in is 2:
+        if cnn is True:    
+            print "Image grid dimensions: ", meas_dims
+            tf_meas.interp()
+            tf_meas.reshape()
+            meas_img_all = tf_meas.meas_img
+            m =tf_meas.m
+        else:
+            meas_img_all = np.vstack((tf_meas.meas_in[0],tf_meas.meas_in[1]))
+            m =tf_meas.m0+tf_meas.m1
+    elif n_chan_in is 1:
+        if cnn is True:    
+            print "Image grid dimensions: ", meas_dims
+            tf_meas.interp()
+            tf_meas.reshape()
+            meas_img_all = np.expand_dims(tf_meas.meas_img[:,:,:,:,0],axis=-1)
+            m =tf_meas.m
+        else:
+            meas_img_all = np.vstack((tf_meas.meas_in[0]))
+            m =tf_meas.m0
+
+    if locate is not False:
+        if rnn is True or cnn is 'fft':
+            location_rat_XYZT()
+        else:
+            location_rat()
+    else:
+        if rnn is True or cnn is 'fft':
+            #pxn_stepsxbatchsize
+            qtrue_all,p=meas_class.scale_dipoleXYZT_OH(dipole,subsample=subsample)    
+            #bxnxp
+        else:
+            #pxn_stepsxbatchsize
+            qtrue_all,p=meas_class.scale_dipole(dipole,subsample=subsample)    
+            #bxnxp
+    
+    if justdims is True:
+        return meas_dims, m, p, n_steps, total_batch_size, Wt
+    else:
+        return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size, Wt 
