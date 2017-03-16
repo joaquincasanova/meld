@@ -19,7 +19,8 @@ def rat_synth(total_batch_size,delT,n_steps,meas_dims,dipole_dims,n_chan_in,meas
     else:
         batch_size=len(selection)
     subject='rat'
-    
+    print dipole_dims, "Dipole dims"
+    print batch_size, "Batch size"
     instance = dipole_class_rat.dipole(delT, batch_size, n_steps,
                       2, meas_dims, dipole_dims,
                       orient=orient, noise_flag=noise_flag,
@@ -31,6 +32,7 @@ def rat_synth(total_batch_size,delT,n_steps,meas_dims,dipole_dims,n_chan_in,meas
     dipole=instance.qtrue
     m=instance.m
     p=instance.p
+    #print p, dipole.shape, "Dipoles (rat_synth)"
     meg_xyz=instance.meg_xyz
     assert meg_xyz.shape[0]==m and meg_xyz.shape[1]==3, meg_xyz.shape
     eeg_xyz=instance.eeg_xyz
@@ -40,12 +42,10 @@ def rat_synth(total_batch_size,delT,n_steps,meas_dims,dipole_dims,n_chan_in,meas
     assert dipole_xyz.shape[0]==p and dipole_xyz.shape[1]==3, dipole_xyz.shape
     n_steps=instance.n_steps
     batch_size=instance.batch_size
-    
+    meas_img_all, qtrue_all, meas_dims, m, p, n_steps, batch_size, Wt = rat_prepro(n_chan_in,dipole,dipole_xyz,meg_data,meg_xyz, eeg_data,eeg_xyz, meas_dims, n_steps, batch_size,subject,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate,rnn=rnn,Wt=Wt)
     if justdims is True:
-        meas_dims, m, p, n_steps, batch_size, Wt = rat_prepro(n_chan_in,dipole,dipole_xyz,meg_data,meg_xyz, eeg_data,eeg_xyz, meas_dims, n_steps, batch_size,subject,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate,rnn=rnn,Wt=Wt)
         return meas_dims, m, p, n_steps, batch_size, Wt
     else:
-        meas_img_all, qtrue_all, meas_dims, m, p, n_steps, batch_size, Wt = rat_prepro(n_chan_in,dipole,dipole_xyz,meg_data,meg_xyz, eeg_data,eeg_xyz, meas_dims, n_steps, batch_size,subject,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate,rnn=rnn,Wt=Wt)
         return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, batch_size, Wt 
 
 def aud_dataset(selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=True,treat=None,rnn=True,Wt=None):
@@ -698,8 +698,8 @@ def rat_prepro(n_chan_in,dipole,dipole_xyz,meg_data,meg_xyz, eeg_data,eeg_xyz, m
     elif locate>0:
         p=3*locate                
     else:
-        p=instance.p
-
+        p=dipole.shape[0]
+        
     tf_meas = meas_class.meas(meg_data,meg_xyz, eeg_data,eeg_xyz, meas_dims, n_steps, batch_size)
     if pca is True:
         Wt=tf_meas.pca(Wt = Wt)
@@ -740,6 +740,9 @@ def rat_prepro(n_chan_in,dipole,dipole_xyz,meg_data,meg_xyz, eeg_data,eeg_xyz, m
         else:
             qtrue_all=location_rat(locate,batch_size,n_steps,p,dipole, dipole_xyz)
     else:
+        
+        #print p, dipole.shape, "Dipoles (rat_prepro, before scaling)"
+
         if rnn is True or cnn is 'fft':
             #pxn_stepsxbatchsize
             qtrue_all,p=meas_class.scale_dipoleXYZT_OH(dipole,subsample=subsample)    
@@ -749,15 +752,14 @@ def rat_prepro(n_chan_in,dipole,dipole_xyz,meg_data,meg_xyz, eeg_data,eeg_xyz, m
             qtrue_all,p=meas_class.scale_dipole(dipole,subsample=subsample)    
             #bxnxp
 
+    #print p, qtrue_all.shape, "Dipoles (rat_prepro, after scaling)"
     assert qtrue_all.shape == (batch_size,n_steps,p), str(qtrue_all.shape)+' '+str((batch_size,n_steps,p))
     if cnn is True:
         assert meas_img_all.shape == (batch_size,n_steps,meas_dims[0],meas_dims[1],1), str(meas_img_all.shape)+' '+ str((batch_size,n_steps,meas_dims[0],meas_dims[1],1))
     else:
         assert meas_img_all.shape == (batch_size,n_steps,m), str(meas_img_all.shape)+' '+str((batch_size,n_steps,m))
         
-    if justdims is True:
-        return meas_dims, m, p, n_steps, batch_size, Wt
-    else:
-        return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, batch_size, Wt 
+    
+    return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, batch_size, Wt 
 
     

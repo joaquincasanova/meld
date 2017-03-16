@@ -1,3 +1,4 @@
+
 import numpy as np
 from numpy import matlib
 import sphere
@@ -33,16 +34,23 @@ class dipole:
         else:
             self.dipole_dims=dipole_dims
             self.grid_dims()
+
+        #print dipole_dims, "Dipole dims"
+
+        #print self.p, "Dipoles (dipole_class_rat)"
             
         self.batch_size=batch_size
         self.mu0=4*np.pi*1e-7
         self.orient=orient#use True if you want each example to have different orientations
         self.pca=pca
-
         self.dipole_init()
         self.GB,self.GB2 = self.p_dipole_gain_B()#Mosher-style gain matrix
         self.GV,self.GV2 = self.p_dipole_gain_V()#Mosher-style ga
         self.dipole_orient()
+
+        #print dipole_dims, "Dipole dims"
+
+        #print self.p, "Dipoles (dipole_class_rat)"
         
     def dipole_init(self):    
 
@@ -73,7 +81,7 @@ class dipole:
             
     def grid_dims(self):
         self.r = 15e-3#15mm    
-        self.el = np.linspace(0,np.pi/2,self.meas_dims[0])
+        self.el = np.linspace(0,np.pi,self.meas_dims[0])
         self.az = np.linspace(2*np.pi/self.meas_dims[1],2*np.pi,self.meas_dims[1])
 
         self.EL,self.AZ=np.meshgrid(self.el,self.az)
@@ -91,8 +99,9 @@ class dipole:
         self.m=np.size(self.X)
 
         #Dipole grid
-        self.rq = np.linspace(0.0,15e-3,self.dipole_dims[0])#15mm
-        self.elq = np.linspace(-np.pi/2,np.pi/2,self.dipole_dims[1])
+        
+        self.rq = np.linspace(14e-3/self.dipole_dims[0],14e-3,self.dipole_dims[0])#14mm
+        self.elq = np.linspace(np.pi/2-np.pi/2/self.dipole_dims[1],-np.pi/2+np.pi/2/self.dipole_dims[1],self.dipole_dims[1])
         self.azq = np.linspace(2*np.pi/self.dipole_dims[2],2*np.pi,self.dipole_dims[2])
         self.RQ,self.ELQ,self.AZQ=np.meshgrid(self.rq,self.elq,self.azq)
 
@@ -232,7 +241,7 @@ class dipole:
         if self.noise_flag is None or self.noise_flag is False:
             bandwidth=0.#/self.delT
         else:
-            bandwidth=1.0
+            bandwidth=100.0
             
         noise_sigma_B = np.sqrt(((1e-12)**2)*bandwidth)  
         noise_sigma_V = np.sqrt(((1e-9)**2)*bandwidth)

@@ -46,18 +46,18 @@ learning_rate = 0.005
 dropout = 1.
 beta = 0.
 
-for locate in [1]:
+for locate in [False,1]:
     subsample = 1
     if locate  is False:
-        subsample=20
+        subsample=1
     for cnn in [False]:
         if cnn is 'fft':
             params_list = [[25,2,3,100,3,.2,.2,.2]]
         else:
             params_list = [[3,3,5,10,3,.2,.2,.2]]
 
-        for rnn in [False]:
-            for subject_id in ['aud','rat']:
+        for rnn in [True,False]:
+            for subject_id in ['rat','aud']:
                 if subject_id is 'aud':
                     treats=[None]#,'left/auditory', 'right/auditory', 'left/visual', 'right/visual']
                 elif subject_id is 'rat':
@@ -96,11 +96,12 @@ for locate in [1]:
                                 delT=1e-2
                                 n_steps=100
                                 meas_dims_in=[4,1]
-                                dipole_dims=[1,2,2]
+                                dipole_dims=[1,2,4]
                                 if cnn is True:
                                     assert k_conv<np.min(meas_dims), "Kconv must be less than image size."
                                 meas_dims, m, p, n_steps, total_batch_size, Wt = nn_prepro.rat_synth(total_batch_size,delT,n_steps,meas_dims_in,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True,selection='all',pca=True,subsample=1,justdims=True,cnn=cnn,locate=locate,treat=None,rnn=rnn,Wt=None)
                                 meas_dims, m, p, n_steps, total_batch_size, Wt = nn_prepro.rat_synth(total_batch_size,delT,n_steps,meas_dims_in,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True,selection='all',pca=True,subsample=1,justdims=True,cnn=cnn,locate=locate,treat=treat,rnn=rnn,Wt=Wt)
+                                #print p, "Dipoles returned"
                             else:
                                 meas_dims, m, p, n_steps, total_batch_size,Wt = nn_prepro.faces_dataset(subject_id,cnn=cnn,justdims=True,locate=locate,treat=None)
                                 meas_dims, m, p, n_steps, total_batch_size,Wt = nn_prepro.faces_dataset(subject_id,cnn=cnn,justdims=True,locate=locate,treat=treat,Wt=Wt)
@@ -112,6 +113,7 @@ for locate in [1]:
                                 meas_img_test, qtrue_test, meas_dims, m, p, n_steps, test_size,Wt = nn_prepro.aud_dataset(selection=test,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,Wt=Wt)
                             elif subject_id is 'rat':
                                 meas_img_test, qtrue_test, meas_dims, m, p, n_steps, test_size,Wt = nn_prepro.rat_synth(total_batch_size,delT,n_steps,meas_dims_in,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True,selection=test,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,rnn=rnn,Wt=Wt)
+                                #print p, "Dipoles returned"
                             else:
                                 meas_img_test, qtrue_test, meas_dims, m, p, n_steps, test_size,Wt = nn_prepro.faces_dataset(subject_id,selection=test,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,Wt=Wt)
                             #pick a test batch
@@ -121,6 +123,7 @@ for locate in [1]:
                                 meas_img_val, qtrue_val, meas_dims, m, p, n_steps, val_size,Wt = nn_prepro.aud_dataset(selection=val,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,Wt=Wt)
                             elif subject_id is 'rat':
                                 meas_img_val, qtrue_val, meas_dims, m, p, n_steps, val_size,Wt = nn_prepro.rat_synth(total_batch_size,delT,n_steps,meas_dims_in,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True,selection=val,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,rnn=rnn,Wt=Wt)
+                                #print p, "Dipoles returned"
                             else:
                                 meas_img_val, qtrue_val, meas_dims, m, p, n_steps, val_size,Wt = nn_prepro.faces_dataset(subject_id,selection=val,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,Wt=Wt)
                             #pick a val batch
@@ -130,7 +133,7 @@ for locate in [1]:
                             k_pool=1
 
                             print "Meas: ", m, " Out: ",p, " Steps: ",n_steps
-
+                            time.sleep(10)
                             nn=meld_net.meld(learning_rate,meas_dims,k_conv,k_pool,n_chan_in,n_conv1,n_conv2,n_out,n_steps,n_lstm,n_layer,cnn=cnn,rnn=rnn,locate=locate)
                             tf.reset_default_graph()
                             nn.network()

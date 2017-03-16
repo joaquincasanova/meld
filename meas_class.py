@@ -13,44 +13,36 @@ def scale_dipole(dipole_in,subsample=1):
     #dipole_in is pxnxb
     dipole_in=dipole_in[range(0,dipole_in.shape[0],subsample)]
     p=dipole_in.shape[0]
+    print p, dipole_in.shape, "Dipoles (scaling, after subsample)"
     n=dipole_in.shape[1]
     b=dipole_in.shape[2]
-    print p, " Dipoles"
-    qq=dipole_in.transpose((0,2,1)).reshape([p,-1])#pxnxb->pxbxn->pxb*n
-    #qq is pxbatch_size*n_steps - convert to one-hot for tf neural net
-    #this should not be done if you want to fit current density.
-    #ppp=np.argmax(np.abs(np.nan_to_num(qq)),axis=0)
-    #q = np.zeros(qq.shape)
-    #q[ppp,[range(0,qq.shape[1])]]=1.0#qq is pxbatch_size*n_steps
-    #ONE-HOT!!! convert to one-hot for tf neural net
-    #don't do that if fitting current density. in fact it's redundant if you use cross-entropy as the cost function.
-    #q=(qq-np.amin(qq,axis=0))/(np.amax(qq,axis=0)-np.amin(qq,axis=0))
-    print "Dipoles now reshaped for TF NN."#as one-hot encoding"
-    q=qq
-    qtrue=q.reshape([p,b,n]).transpose((1,2,0))#bxnxp
+    q=dipole_in.reshape([p,-1])#pxn*b  
+    print "One-hot encoding"
+    pp=np.argmax(q,axis=0)
+    qq=np.zeros(q.shape)
+    qq[pp,range(0,q.shape[1])]=1.0
+    qq=qq.reshape(dipole_in.shape)#pxnxb
+    qtrue=np.transpose(qq,(2,1,0))#bxnxp
+    #print p, qtrue.shape, "Dipoles (scaling)"
     return qtrue, p
 
 def scale_dipoleXYZT_OH(dipole_in,subsample=1):
     #dipole_in is pxnxb
     dipole_in=dipole_in[range(0,dipole_in.shape[0],subsample)]
     p=dipole_in.shape[0]
+    print p, dipole_in.shape, "Dipoles (scaling, after subsample)"
     n=dipole_in.shape[1]
     b=dipole_in.shape[2]
-    print p, " Dipoles"
     qq=dipole_in.transpose((0,2,1)).reshape([p,-1])#pxnxb->pxbxn->pxb*n
     i,j = np.unravel_index(np.argsort(np.ravel(qq)),qq.shape)
     I,J=i[-1],j[-1]#I is neuron index,J is temporal index
     #qq is pxbatch_size*n_steps - convert to one-hot for tf neural net
-    #this should not be done if you want to fit current density.
-    #ppp=np.argmax(np.abs(np.nan_to_num(qq)),axis=0)
     q = np.zeros(qq.shape)
+    print "One-hot encoding"
     q[I,-1]=1.0#qq is pxbatch_size*n_steps
-    #ONE-HOT!!! convert to one-hot for tf neural net
-    #don't do that if fitting current density. in fact it's redundant if you use cross-entropy as the cost function.
-    #q=(qq-np.amin(qq,axis=0))/(np.amax(qq,axis=0)-np.amin(qq,axis=0))
-    print "Dipoles now reshaped for TF NN."#as one-hot encoding"
     q=qq
     qtrue=q.reshape([p,b,n]).transpose((1,2,0))#bxnxp
+    #print p, qtrue.shape, "Dipoles (scaling)"
     return qtrue, p
 
 #preprocesses real data into a format acceptable to the NN.
