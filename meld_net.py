@@ -319,7 +319,8 @@ class meld:
         
                 self.cross = tf.add(tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(self.logits, qtrain_OH),name="cross"),self.reg)
                 self.accuracy = tf.reduce_mean(tf.cast(tf.equal(self.A,B),tf.float32),name="accuracy")
-
+                variable_summaries(self.accuracy, 'accuracy')
+            
                 
                 if self.locate is not False:
                     with tf.name_scope('rep_outputs'):
@@ -347,7 +348,7 @@ class meld:
                 
                 self.cross_last = tf.add(tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(self.logits_last, self.qtrain_last_OH),name="cross_last"),self.reg)
                 self.accuracy_last = tf.reduce_mean(tf.cast(tf.equal(self.AA,BB),tf.float32),name="accuracy_last")
-                
+                variable_summaries(self.accuracy_last, 'accuracy')
                 if self.locate is not False:
                     with tf.name_scope('rep_outputs'):
                         qhat_rep = tf.matmul(self.qhat_last,self.W0)#bx3x3x3l
