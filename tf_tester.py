@@ -96,7 +96,7 @@ for locate in [False,1]:
                                 delT=1e-2
                                 n_steps=100
                                 meas_dims_in=[4,1]
-                                dipole_dims=[1,2,4]
+                                dipole_dims=[1,1,4]
                                 if cnn is True:
                                     assert k_conv<np.min(meas_dims), "Kconv must be less than image size."
                                 meas_dims, m, p, n_steps, total_batch_size, Wt = nn_prepro.rat_synth(total_batch_size,delT,n_steps,meas_dims_in,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True,selection='all',pca=True,subsample=1,justdims=True,cnn=cnn,locate=locate,treat=None,rnn=rnn,Wt=None)
