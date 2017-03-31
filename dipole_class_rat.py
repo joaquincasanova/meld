@@ -82,7 +82,7 @@ class dipole:
     def grid_dims(self):
         self.r = 15e-3#15mm    
         self.el = np.linspace(0,np.pi,self.meas_dims[0])
-        self.az = np.linspace(2*np.pi/self.meas_dims[1],2*np.pi,self.meas_dims[1])
+        self.az = np.linspace(np.pi/self.meas_dims[1],2*np.pi,self.meas_dims[1])
 
         self.EL,self.AZ=np.meshgrid(self.el,self.az)
         #for plotting
@@ -101,8 +101,8 @@ class dipole:
         #Dipole grid
         
         self.rq = np.linspace(14e-3/self.dipole_dims[0],14e-3,self.dipole_dims[0])#14mm
-        self.elq = np.linspace(np.pi/2-np.pi/2/self.dipole_dims[1],-np.pi/2+np.pi/2/self.dipole_dims[1],self.dipole_dims[1])
-        self.azq = np.linspace(2*np.pi/self.dipole_dims[2],2*np.pi,self.dipole_dims[2])
+        self.elq = np.linspace(0,np.pi,self.dipole_dims[1])
+        self.azq = np.linspace(np.pi/self.dipole_dims[2],2*np.pi,self.dipole_dims[2])
         self.RQ,self.ELQ,self.AZQ=np.meshgrid(self.rq,self.elq,self.azq)
 
         self.p=np.size(self.RQ)
