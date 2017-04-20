@@ -260,12 +260,19 @@ class meld:
             variable_summaries(bd, 'bd')
             dense_out = tf.nn.relu(tf.add(tf.matmul(dense, wd),bd),name="dense_out")#try relu
             dense_out = tf.nn.dropout(dense_out, self.dropoutPH)
+        with tf.name_scope('middle_layer'):
+            wh = tf.Variable(tf.random_normal([self.n_lstm, self.n_layer]))
+            bh = tf.Variable(tf.random_normal([self.n_layer]))
+            variable_summaries(wh, 'wh')
+            variable_summaries(bh, 'bh')
+            hidden_out = tf.nn.relu(tf.add(tf.matmul(dense_out, wh),bh),name="hidden_out")#try relu
+            hidden_out = tf.nn.dropout(hidden_out, self.dropoutPH)
         with tf.name_scope('output_layer'):
-            wo = tf.Variable(tf.random_normal([self.n_lstm, self.n_out]))
+            wo = tf.Variable(tf.random_normal([self.n_layer, self.n_out]))
             bo = tf.Variable(tf.random_normal([self.n_out]))
             variable_summaries(wo, 'wo')
             variable_summaries(bo, 'bo')
-            self.logits = tf.add(tf.matmul(dense_out, wo),bo)
+            self.logits = tf.add(tf.matmul(hidden_out, wo),bo)
             #self.logits = tf.matmul(dense_out, wo)
             if self.locate is not False:
                 self.qhat = self.logits

@@ -241,7 +241,7 @@ class dipole:
         if self.noise_flag is None or self.noise_flag is False:
             bandwidth=0.#/self.delT
         else:
-            bandwidth=100.0
+            bandwidth=1.0
             
         noise_sigma_B = np.sqrt(((1e-12)**2)*bandwidth)  
         noise_sigma_V = np.sqrt(((1e-9)**2)*bandwidth)

@@ -2,7 +2,7 @@ import numpy as np
 from numpy import matlib
 import sphere
 import tensorflow as tf
-import meld_net
+import meld_net_1
 import csv
 import nn_prepro
 import time
@@ -54,20 +54,13 @@ for locate in [False,1]:
         if cnn is 'fft':
             params_list = [[25,2,3,100,3,.2,.2,.2,2,4]]
         else:
-            params_list = [[3,3,5,4,3,.2,.1,.1,2,4],
-                           [3,3,5,8,3,.2,.1,.1,2,4],
-                           [3,3,5,16,3,.2,.1,.1,2,4],
-                           [3,3,5,4,3,.2,.1,.1,4,4],
-                           [3,3,5,8,3,.2,.1,.1,4,4],
-                           [3,3,5,16,3,.2,.1,.1,4,4],
-                           [3,3,5,4,3,.2,.1,.1,2,2],
-                           [3,3,5,8,3,.2,.1,.1,2,2],
-                           [3,3,5,16,3,.2,.1,.1,2,2],
-                           [3,3,5,4,3,.2,.1,.1,4,2],
-                           [3,3,5,8,3,.2,.1,.1,4,2],
-                           [3,3,5,16,3,.2,.1,.1,4,2]]
+            params_list = [[3,3,5,8,4,.2,.1,.1,2,2],
+                           [3,3,5,8,4,.2,.1,.1,4,4],
+                           [3,3,5,8,4,.2,.1,.1,2,4],
+                           [3,3,5,8,4,.2,.1,.1,4,2]]
+            
 
-        for rnn in [True,False]:
+        for rnn in [False]:
             for subject_id in ['rat']:
                 if subject_id is 'aud':
                     treats=[None]#,'left/auditory', 'right/auditory', 'left/visual', 'right/visual']
@@ -85,7 +78,7 @@ for locate in [False,1]:
                     print 'Subject: ',subject_id,' PCA: ',pca,' Random: ',rand_test, ' CNN: ',cnn, ' RNN: ',rnn, 'Locate: ',locate, 'Treat: ',lab_treat
 
                     fieldnames=['n_sensors','n_dipoles','batches','learning rate','batch_size','per_batch','dropout','beta','k_conv','n_conv1','n_conv2','n_layer','n_lstm','n_steps','train step','cost']
-                    name='./data/subject_%s_pca_all_%s_rand_%s_cnn_%s_rnn_%s_locate_%s_treat_%s' % (subject_id, pca, rand_test, cnn, rnn,locate,lab_treat)
+                    name='./data/subject_%s_pca_all_%s_rand_%s_cnn_%s_rnn_%s_locate_%s_treat_%s_hidden' % (subject_id, pca, rand_test, cnn, rnn,locate,lab_treat)
                     fname = name + '.csv' 
 
                     with open(fname,'a') as csvfile:
@@ -153,7 +146,7 @@ for locate in [False,1]:
                             nn.initializer()     
 
                             with tf.Session() as session:
-                                logdir = '/tmp/tensorflowlogs/sub_%s/pca_all_%s/rand_%s/cnn_%s/rnn_%s/n_sensors_%s/n_dipoles_%s/locate_knn_%s/n_lstm_%s/treat_%s/' % (subject_id,pca,rand_test,cnn,rnn,n_sensors,n_dipoles,locate,n_lstm,lab_treat)
+                                logdir = '/tmp/tensorflowlogs/sub_%s/pca_all_%s/rand_%s/cnn_%s/rnn_%s/n_sensors_%s/n_dipoles_%s/locate_knn_%s/n_lstm_%s/treat_%s/hidden/' % (subject_id,pca,rand_test,cnn,rnn,n_sensors,n_dipoles,locate,n_lstm,lab_treat)
                                 if tf.gfile.Exists(logdir):
                                     tf.gfile.DeleteRecursively(logdir)
                                 tf.gfile.MakeDirs(logdir)

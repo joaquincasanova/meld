@@ -252,23 +252,19 @@ def location(stc,subject,selection='all',locate=True):
             assert mxloc.shape[0]==locate and mxloc.shape[1]==ns
             hemi = np.where(mxloc<nd/2,0,1).reshape([-1])
             mxvtx_long =vtx_long[mxloc].reshape([-1])
-            #if subject is 'sample':
-            #    loc[s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,subjects_dir='/home/jcasa/mne_data/MNE-sample-data/subjects',verbose=False).reshape([-1,locate*3])
-            #else:
-            #    loc[s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,verbose=False).reshape([-1,locate*3])
             if subject is 'sample':
                 #ns*locatex3
                 tmp = mne.vertex_to_mni(mxvtx_long,hemi,subject,subjects_dir='/home/jcasa/mne_data/MNE-sample-data/subjects',verbose=False)
-                assert tmp.shape[0]==3 and tmp.shape[1]==ns*self.locate, tmp.shape
-                tmp = tmp.T.reshape([self.locate,ns,3])
-                tmp = numpy.transpose(tmp,(1,0,2)).reshape([-1,self.locate*3])
-                loc[s,: ,:] = tmp
+                
             else:
-                tmp = mne.vertex_to_mni(mxvtx_long,hemi,subject,verbose=False).reshape([-1,locate*3])
-                assert tmp.shape[0]==3 and tmp.shape[1]==ns*self.locate, tmp.shape
-                tmp = tmp.T.reshape([self.locate,ns,3])
-                tmp = numpy.transpose(tmp,(1,0,2)).reshape([-1,self.locate*3])
-                loc[s,: ,:] = tmp
+                tmp = mne.vertex_to_mni(mxvtx_long,hemi,subject,verbose=False)
+
+            assert tmp.shape[1]==3 and tmp.shape[0]==ns*locate, tmp.shape
+            tmp = tmp.reshape([locate,ns,3])
+            tmp = np.transpose(tmp,(1,0,2)).reshape([-1,locate*3])
+            assert tmp.shape[1]==3*locate and tmp.shape[0]==ns, tmp.shape
+            
+            loc[s,: ,:] = tmp
             
         qtrue_all = loc
         p=loc.shape[2]
@@ -290,24 +286,18 @@ def location(stc,subject,selection='all',locate=True):
             assert mxloc.shape[0]==locate and mxloc.shape[1]==ns
             hemi = np.where(mxloc<nd/2,0,1).reshape([-1])
             mxvtx_long =vtx_long[mxloc].reshape([-1])
-            #if subject is 'sample':
-            #    loc[ind_s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,subjects_dir='/home/jcasa/mne_data/MNE-sample-data/subjects',verbose=False).reshape([-1,locate*3])
-            #else:
-            #    loc[ind_s,: ,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,verbose=False).reshape([-1,locate*3])
-            #ind_s+=1
             if subject is 'sample':
                 #ns*locatex3
                 tmp = mne.vertex_to_mni(mxvtx_long,hemi,subject,subjects_dir='/home/jcasa/mne_data/MNE-sample-data/subjects',verbose=False)
-                assert tmp.shape[0]==3 and tmp.shape[1]==ns*self.locate, tmp.shape
-                tmp = tmp.T.reshape([self.locate,ns,3])
-                tmp = numpy.transpose(tmp,(1,0,2)).reshape([-1,self.locate*3])
-                loc[ind_s,: ,:] = tmp
             else:
-                tmp = mne.vertex_to_mni(mxvtx_long,hemi,subject,verbose=False).reshape([-1,locate*3])
-                assert tmp.shape[0]==3 and tmp.shape[1]==ns*self.locate, tmp.shape
-                tmp = tmp.T.reshape([self.locate,ns,3])
-                tmp = numpy.transpose(tmp,(1,0,2)).reshape([-1,self.locate*3])
-                loc[ind_s,: ,:] = tmp
+                tmp = mne.vertex_to_mni(mxvtx_long,hemi,subject,verbose=False)
+
+            assert tmp.shape[1]==3 and tmp.shape[0]==ns*locate, tmp.shape
+            tmp = tmp.reshape([locate,ns,3])
+            tmp = np.transpose(tmp,(1,0,2)).reshape([-1,locate*3])
+            assert tmp.shape[1]==3*locate and tmp.shape[0]==ns, tmp.shape
+            loc[ind_s,: ,:] = tmp
+
             ind_s+=1
                 
         qtrue_all = loc
@@ -333,10 +323,10 @@ def locationXYZT(stc,subject,selection='all',locate=True):
             hemi = np.where(I<nd/2,0,1).reshape([-1])
             mxvtx_long =vtx_long[I].reshape([-1])
             if subject is 'sample':
-                loc[s,-1,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,subjects_dir='/home/jcasa/mne_data/MNE-sample-data/subjects',verbose=False).reshape([-1,locate*3])
+                tmp = mne.vertex_to_mni(mxvtx_long,hemi,subject,subjects_dir='/home/jcasa/mne_data/MNE-sample-data/subjects',verbose=False).reshape([-1,locate*3])
             else:
-                loc[s,-1,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,verbose=False).reshape([-1,locate*3])
-                
+                tmp = mne.vertex_to_mni(mxvtx_long,hemi,subject,verbose=False).reshape([-1,locate*3])
+            loc[s,-1,:] = tmp
         qtrue_all = loc
         p=loc.shape[2]
         return qtrue_all, p
@@ -357,9 +347,10 @@ def locationXYZT(stc,subject,selection='all',locate=True):
             hemi = np.where(I<nd/2,0,1).reshape([-1])
             mxvtx_long =vtx_long[I].reshape([-1])
             if subject is 'sample':
-                loc[ind_s,-1,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,subjects_dir='/home/jcasa/mne_data/MNE-sample-data/subjects',verbose=False).reshape([-1,locate*3])
+                tmp = mne.vertex_to_mni(mxvtx_long,hemi,subject,subjects_dir='/home/jcasa/mne_data/MNE-sample-data/subjects',verbose=False).reshape([-1,locate*3])
             else:
-                loc[ind_s,-1,:] = mne.vertex_to_mni(mxvtx_long,hemi,subject,verbose=False).reshape([-1,locate*3])
+                tmp = mne.vertex_to_mni(mxvtx_long,hemi,subject,verbose=False).reshape([-1,locate*3])
+            loc[ind_s,-1,:]=tmp
             ind_s+=1
         qtrue_all = loc
         p=loc.shape[2]
@@ -452,11 +443,11 @@ def cnn_xjustdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca
     else:
         if rnn is True or cnn is 'fft':
             #pxn_stepsxbatchsize
-            qtrue_all,p=meas_class.scale_dipole(dipole,subsample=subsample)    
+            qtrue_all,p=meas_class.scale_dipoleXYZT_OH(dipole,subsample=subsample)    
             #bxnxp
         else:
             #pxn_stepsxbatchsize
-            qtrue_all,p=meas_class.scale_dipoleXYZT_OH(dipole,subsample=subsample)    
+            qtrue_all,p=meas_class.scale_dipole(dipole,subsample=subsample)    
             #bxnxp
     del stc, epochs, epochs_eeg, epochs_meg
     return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size, Wt 
@@ -511,11 +502,11 @@ def xcnn_xjustdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pc
     else:
         if rnn is True or cnn is 'fft':
             #pxn_stepsxbatchsize
-            qtrue_all,p=meas_class.scale_dipole(dipole,subsample=subsample)    
+            qtrue_all,p=meas_class.scale_dipoleXYZT_OH(dipole,subsample=subsample)    
             #bxnxp
         else:
             #pxn_stepsxbatchsize
-            qtrue_all,p=meas_class.scale_dipoleXYZT_OH(dipole,subsample=subsample)    
+            qtrue_all,p=meas_class.scale_dipole(dipole,subsample=subsample)    
             #bxnxp
     del stc, epochs, epochs_eeg, epochs_meg
     return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size, Wt 

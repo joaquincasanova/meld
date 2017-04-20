@@ -2,7 +2,7 @@ import numpy as np
 from numpy import matlib
 import sphere
 import tensorflow as tf
-import meld_net
+import meld_net_1 as meld_net
 import csv
 import nn_prepro
 import time
@@ -52,12 +52,16 @@ for locate in [False,1]:
         subsample=1
     for cnn in [False]:
         if cnn is 'fft':
-            params_list = [[25,2,3,100,3,.2,.2,.2]]
+            params_list = [[25,2,3,100,3,.2,.2,.2,2,4]]
         else:
-            params_list = [[3,3,5,10,3,.2,.2,.2]]
+            params_list = [[3,3,5,8,4,.2,.1,.1,2,2],
+                           [3,3,5,8,4,.2,.1,.1,4,4],
+                           [3,3,5,8,4,.2,.1,.1,2,4],
+                           [3,3,5,8,4,.2,.1,.1,4,2]]
+            
 
-        for rnn in [True,False]:
-            for subject_id in ['rat','aud']:
+        for rnn in [False]:
+            for subject_id in ['rat']:
                 if subject_id is 'aud':
                     treats=[None]#,'left/auditory', 'right/auditory', 'left/visual', 'right/visual']
                 elif subject_id is 'rat':
@@ -73,15 +77,15 @@ for locate in [False,1]:
                         
                     print 'Subject: ',subject_id,' PCA: ',pca,' Random: ',rand_test, ' CNN: ',cnn, ' RNN: ',rnn, 'Locate: ',locate, 'Treat: ',lab_treat
 
-                    fieldnames=['batches','learning rate','batch_size','per_batch','dropout','beta','k_conv','n_conv1','n_conv2','n_layer','n_lstm','n_steps','train step','cost']
-                    name='./data/subject_%s_pca_all_%s_rand_%s_cnn_%s_rnn_%s_locate_%s_treat_%s' % (subject_id, pca, rand_test, cnn, rnn,locate,lab_treat)
+                    fieldnames=['n_sensors','n_dipoles','batches','learning rate','batch_size','per_batch','dropout','beta','k_conv','n_conv1','n_conv2','n_layer','n_lstm','n_steps','train step','cost']
+                    name='./data/tf1_subject_%s_pca_all_%s_rand_%s_cnn_%s_rnn_%s_locate_%s_treat_%s_hidden' % (subject_id, pca, rand_test, cnn, rnn,locate,lab_treat)
                     fname = name + '.csv' 
 
                     with open(fname,'a') as csvfile:
                         writer=csv.DictWriter(csvfile,fieldnames=fieldnames)
                         writer.writeheader()
 
-                        for [k_conv, n_conv1, n_conv2, n_lstm, n_layer, test_frac, val_frac, batch_frac] in params_list:
+                        for [k_conv, n_conv1, n_conv2, n_lstm, n_layer, test_frac, val_frac, batch_frac, n_sensors, n_dipoles] in params_list:
 
                             if cnn is 'fft' or subject_id is 'rat':
                                 n_chan_in=1
@@ -95,8 +99,8 @@ for locate in [False,1]:
                                 total_batch_size=1000
                                 delT=1e-2
                                 n_steps=100
-                                meas_dims_in=[4,1]
-                                dipole_dims=[1,1,4]
+                                meas_dims_in=[1,n_sensors]
+                                dipole_dims=[1,1,n_dipoles]
                                 if cnn is True:
                                     assert k_conv<np.min(meas_dims), "Kconv must be less than image size."
                                 meas_dims, m, p, n_steps, total_batch_size, Wt = nn_prepro.rat_synth(total_batch_size,delT,n_steps,meas_dims_in,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True,selection='all',pca=True,subsample=1,justdims=True,cnn=cnn,locate=locate,treat=None,rnn=rnn,Wt=None)
@@ -142,7 +146,7 @@ for locate in [False,1]:
                             nn.initializer()     
 
                             with tf.Session() as session:
-                                logdir = '/tmp/tensorflowlogs/sub_%s/pca_all_%s/rand_%s/cnn_%s/rnn_%s/locate_knn_%s/treat_%s/' % (subject_id,pca,rand_test,cnn,rnn,locate,lab_treat)
+                                logdir = '/tmp/tensorflowlogs/tf1_sub_%s/pca_all_%s/rand_%s/cnn_%s/rnn_%s/n_sensors_%s/n_dipoles_%s/locate_knn_%s/n_lstm_%s/treat_%s/hidden/' % (subject_id,pca,rand_test,cnn,rnn,n_sensors,n_dipoles,locate,n_lstm,lab_treat)
                                 if tf.gfile.Exists(logdir):
                                     tf.gfile.DeleteRecursively(logdir)
                                 tf.gfile.MakeDirs(logdir)
@@ -183,7 +187,7 @@ for locate in [False,1]:
                                                 #pred_obs(guess, true, locate,name+str(step))
                                                 
 
-                                        writer.writerow({'batches':batches,'learning rate':learning_rate,'batch_size':batch_size,'per_batch':per_batch,'dropout':dropout,'beta':beta,'k_conv':k_conv,'n_conv1':n_conv1,'n_conv2':n_conv2,'n_layer':n_layer,'n_steps':n_steps,'n_lstm':n_lstm,'train step':step,'cost':cost})
+                                        writer.writerow({'n_sensors':n_sensors,'n_dipoles':n_dipoles,'batches':batches,'learning rate':learning_rate,'batch_size':batch_size,'per_batch':per_batch,'dropout':dropout,'beta':beta,'k_conv':k_conv,'n_conv1':n_conv1,'n_conv2':n_conv2,'n_layer':n_layer,'n_steps':n_steps,'n_lstm':n_lstm,'train step':step,'cost':cost})
 
                                         tstep=step+batch_num*per_batch
                                         train_writer.add_run_metadata(run_metadata, 'train_step%03d' % tstep)
@@ -193,7 +197,7 @@ for locate in [False,1]:
                                             summary,guess,true,costv = session.run([nn.merged,nn.qhat,nn.qtrain_unflat, nn.cost], feed_dict={nn.qtrainPH: qtrue_val, nn.measPH: meas_img_val, nn.dropoutPH: dropout, nn.betaPH: beta})
                                             print "Val Step: ", step, "Cost: ",costv
 
-                                            writer.writerow({'batches':batches,'learning rate':learning_rate,'batch_size':batch_size,'per_batch':per_batch,'dropout':dropout,'beta':beta,'k_conv':k_conv,'n_conv1':n_conv1,'n_conv2':n_conv2,'n_layer':n_layer,'n_lstm':n_lstm,'n_steps':n_steps,'train step':-1,'cost':costv})
+                                            writer.writerow({'n_sensors':n_sensors,'n_dipoles':n_dipoles,'batches':batches,'learning rate':learning_rate,'batch_size':batch_size,'per_batch':per_batch,'dropout':dropout,'beta':beta,'k_conv':k_conv,'n_conv1':n_conv1,'n_conv2':n_conv2,'n_layer':n_layer,'n_lstm':n_lstm,'n_steps':n_steps,'train step':-1,'cost':costv})
                                             train_writer.add_summary(summary, tstep)
 
 
@@ -210,7 +214,7 @@ for locate in [False,1]:
                                 else:
                                     guess,true,costt = session.run([nn.qhat_last, nn.qtrain_last,nn.cost],feed_dict={nn.qtrainPH: qtrue_test, nn.measPH: meas_img_test, nn.dropoutPH: dropout, nn.betaPH: beta})
                                 print "Test Step: ", step, "Cost: ", costt
-                                writer.writerow({'batches':batches,'learning rate':learning_rate,'batch_size':batch_size,'per_batch':per_batch,'dropout':dropout,'beta':beta,'k_conv':k_conv,'n_conv1':n_conv1,'n_conv2':n_conv2,'n_layer':n_layer,'n_lstm':n_lstm,'n_steps':n_steps,'train step':-2,'cost':costt})
+                                writer.writerow({'n_sensors':n_sensors,'n_dipoles':n_dipoles,'batches':batches,'learning rate':learning_rate,'batch_size':batch_size,'per_batch':per_batch,'dropout':dropout,'beta':beta,'k_conv':k_conv,'n_conv1':n_conv1,'n_conv2':n_conv2,'n_layer':n_layer,'n_lstm':n_lstm,'n_steps':n_steps,'train step':-2,'cost':costt})
 
                                 if locate is True: locate=1
                                 #if locate>0:
