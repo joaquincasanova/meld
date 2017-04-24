@@ -254,7 +254,7 @@ class meld:
             dense_out = tf.nn.relu(tf.add(tf.matmul(dense, wd),bd),name="dense_out")#try relu
             dense_out = tf.nn.dropout(dense_out, self.dropoutPH)
                 
-        with tf.name_scope('encoder_layer'):
+        with tf.variable_scope('encoder_layer'):
             #now predict sequence of firing
             cell = tf.contrib.rnn.BasicLSTMCell(self.n_lstm[0],state_is_tuple=True)
             cell = tf.contrib.rnn.DropoutWrapper(cell, output_keep_prob=self.dropoutPH)
@@ -272,7 +272,7 @@ class meld:
             output1 = tf.reshape(tf.nn.relu(tf.add(tf.matmul(tf.reshape(output,[-1,self.n_lstm[0]]),wb),bb)),
                                  [-1, self.n_steps, self.n_lstm[1]])           
                                
-        with tf.name_scope('decoder_layer'):
+        with tf.variable_scope('decoder_layer'):
             #now predict sequence of firing
             cell2 = tf.contrib.rnn.BasicLSTMCell(self.n_lstm[1],state_is_tuple=True)
             cell2 = tf.contrib.rnn.DropoutWrapper(cell2, output_keep_prob=self.dropoutPH)
@@ -336,7 +336,7 @@ class meld:
             dense_out = tf.nn.relu(tf.add(tf.matmul(dense, wd),bd),name="dense_out")#try relu
             dense_out = tf.nn.dropout(dense_out, self.dropoutPH)
                 
-        with tf.name_scope('encoder_layer'):
+        with tf.variable_scope('encoder_layer'):
             #now predict sequence of firing
             cell = tf.contrib.rnn.BasicLSTMCell(self.n_lstm[0],state_is_tuple=True)
             cell = tf.contrib.rnn.DropoutWrapper(cell, output_keep_prob=self.dropoutPH)
@@ -354,7 +354,7 @@ class meld:
             output1 = tf.reshape(tf.nn.relu(tf.add(tf.matmul(tf.reshape(output,[-1,self.n_lstm[0]]),wb),bb)),
                                  [-1, self.n_steps, self.n_lstm[1]])           
                 
-        with tf.name_scope('decoder_layer'):
+        with tf.variable_scope('decoder_layer'):
             #now predict sequence of firing
             cell2 = tf.contrib.rnn.BasicLSTMCell(self.n_lstm[1],state_is_tuple=True)
             cell2 = tf.contrib.rnn.DropoutWrapper(cell2, output_keep_prob=self.dropoutPH)

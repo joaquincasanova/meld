@@ -29,8 +29,10 @@ def pred_obs(guess,true,locate,name):
         fig = plt.figure()
         ax = fig.gca(projection='3d')
         ax.plot(x, y, z, 'ob')
-        ax.plot(xt, yt, zt, 'or')
-        plt.title('Number '+str(l))
+        ax.plot(xt, yt, zt, 'xr')
+        plt.xlabel('X (mm)')
+        plt.ylabel('Y (mm)')
+        plt.title('Dipole locations (mm)')
         plt.savefig(name+'.png')
         plt.close()
     ###############################################################################
@@ -171,7 +173,7 @@ for locate in [1]:
                                             print "Train Step: ", step, "Cost: ",cost                                              
 
                                         if step % plot_step==0:
-                                            name = str(batch_num)+'_'+str(step)+'_'+str(rnn)+'_'+str(cnn)
+                                            name = str(subject_id)+'_'+str(batch_num)+'_'+str(step)+'_'+str(rnn)+'_'+str(cnn)
                                             if rnn is True:
                                                 guess,true = session.run([nn.qhat_last, nn.qtrain_last],feed_dict={nn.qtrainPH: qtrue, nn.measPH: meas_img, nn.dropoutPH: dropout, nn.betaPH: beta})
                                             else:
