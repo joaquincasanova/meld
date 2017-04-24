@@ -41,29 +41,18 @@ pca=True
 cnn=True
 locate=95
 
-subject_id='aud'
+subject_id=7
 
 if subject_id is 'aud':
-    treats=['left/auditory', 'right/auditory', 'left/visual', 'right/visual']
+    treats=[None]#, 'left/auditory', 'right/auditory', 'left/visual', 'right/visual']
 else:
-    treats=['face/famous','scrambled','face/unfamiliar']
+    treats=[None]#, 'face/famous','scrambled','face/unfamiliar']
 nummax=len(treats)
 ax=None
 fig=None
 num=0
 for treat in treats:
     if subject_id is 'aud':
-        meas_dims, m, p, n_steps, total_batch_size = nn_prepro.aud_dataset(justdims=True,cnn=cnn,locate=locate,treat=treat)
+        meas_dims, m, p, n_steps, total_batch_size,Wt = nn_prepro.aud_dataset(justdims=True,cnn=cnn,locate=locate,treat=treat)
     else:
-        meas_dims, m, p, n_steps, total_batch_size = nn_prepro.faces_dataset(subject_id,cnn=cnn,justdims=True,locate=locate,treat=treat)
-
-    test, val, batch_list, batches = nn_prepro.ttv(total_batch_size,.2,.1,.1,rand_test=True)
-    #test = 'all'
-    if subject_id is 'aud':
-        meas_img_test, qtrue_test, meas_dims, m, p, n_steps, test_size = nn_prepro.aud_dataset(selection=test,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat)
-    else:
-        meas_img_test, qtrue_test, meas_dims, m, p, n_steps, test_size = nn_prepro.faces_dataset(subject_id,selection=test,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat)
-    print qtrue_test.shape
-
-    ax,fig=pred_obs(qtrue_test,locate,treat,num,nummax,ax=ax,fig=fig)
-    num+=1
+        meas_dims, m, p, n_steps, total_batch_size,Wt = nn_prepro.faces_dataset(subject_id,cnn=cnn,justdims=True,locate=locate,treat=treat)

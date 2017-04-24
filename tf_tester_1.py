@@ -55,9 +55,15 @@ for locate in [False,1]:
             params_list = [[25,2,3,100,3,.2,.2,.2,2,4]]
         else:
             params_list = [[3,3,5,8,4,.2,.1,.1,2,2],
-                           [3,3,5,8,4,.2,.1,.1,4,4],
+                           [3,3,5,8,4,.2,.1,.1,3,2],
+                           [3,3,5,8,4,.2,.1,.1,4,2],
+                           [3,3,5,8,4,.2,.1,.1,5,2],
+                           [3,3,5,8,4,.2,.1,.1,6,2],
                            [3,3,5,8,4,.2,.1,.1,2,4],
-                           [3,3,5,8,4,.2,.1,.1,4,2]]
+                           [3,3,5,8,4,.2,.1,.1,3,4],
+                           [3,3,5,8,4,.2,.1,.1,4,4],
+                           [3,3,5,8,4,.2,.1,.1,5,4],
+                           [3,3,5,8,4,.2,.1,.1,6,4]]
             
 
         for rnn in [False]:
@@ -99,7 +105,7 @@ for locate in [False,1]:
                                 total_batch_size=1000
                                 delT=1e-2
                                 n_steps=100
-                                meas_dims_in=[1,n_sensors]
+                                meas_dims_in=[n_sensors,1]
                                 dipole_dims=[1,1,n_dipoles]
                                 if cnn is True:
                                     assert k_conv<np.min(meas_dims), "Kconv must be less than image size."
@@ -146,7 +152,7 @@ for locate in [False,1]:
                             nn.initializer()     
 
                             with tf.Session() as session:
-                                logdir = '/tmp/tensorflowlogs/tf1_sub_%s/pca_all_%s/rand_%s/cnn_%s/rnn_%s/n_sensors_%s/n_dipoles_%s/locate_knn_%s/n_lstm_%s/treat_%s/hidden/' % (subject_id,pca,rand_test,cnn,rnn,n_sensors,n_dipoles,locate,n_lstm,lab_treat)
+                                logdir = '/tmp/tensorflowlogs/tf1_sub_%s/pca_all_%s/rand_%s/cnn_%s/rnn_%s/n_sensors_el_%s/n_dipoles_%s/locate_knn_%s/n_lstm_%s/treat_%s/hidden/' % (subject_id,pca,rand_test,cnn,rnn,n_sensors,n_dipoles,locate,n_lstm,lab_treat)
                                 if tf.gfile.Exists(logdir):
                                     tf.gfile.DeleteRecursively(logdir)
                                 tf.gfile.MakeDirs(logdir)
@@ -172,33 +178,37 @@ for locate in [False,1]:
                                         run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
                                         run_metadata = tf.RunMetadata()
 
-                                        if rnn is False and cnn is not 'fft':
-                                            train_summary, _ , guess,true,cost = session.run([nn.train_summary, nn.train_step, nn.qhat, nn.qtrain_unflat, nn.cost],feed_dict={nn.qtrainPH: qtrue, nn.measPH: meas_img, nn.dropoutPH: dropout, nn.betaPH: beta})
+                                        if locate is False:
+                                            train_summary,train_acc_summary, _ ,cost,acc = session.run([nn.train_summary,nn.train_acc_summary, nn.train_step, nn.cost, nn.accuracy],feed_dict={nn.qtrainPH: qtrue, nn.measPH: meas_img, nn.dropoutPH: dropout, nn.betaPH: beta})
                                         else:
-                                            train_summary, _ , guess,true,cost = session.run([nn.train_summary, nn.train_step, nn.qhat_last, nn.qtrain_last, nn.cost],feed_dict={nn.qtrainPH: qtrue, nn.measPH: meas_img, nn.dropoutPH: dropout, nn.betaPH: beta})
+                                            train_summary, _ ,cost = session.run([nn.train_summary, nn.train_step, nn.cost],feed_dict={nn.qtrainPH: qtrue, nn.measPH: meas_img, nn.dropoutPH: dropout, nn.betaPH: beta})
 
                                         if step % print_step==0:
-                                            print "Train Step: ", step, "Cost: ",cost
-
-                                        if step % plot_step==0:
-
-                                            if locate is True: locate=1
-                                            #if locate>0:
-                                                #pred_obs(guess, true, locate,name+str(step))
-                                                
+                                            print "Train Step: ", step, "Cost: ",cost                                              
 
                                         writer.writerow({'n_sensors':n_sensors,'n_dipoles':n_dipoles,'batches':batches,'learning rate':learning_rate,'batch_size':batch_size,'per_batch':per_batch,'dropout':dropout,'beta':beta,'k_conv':k_conv,'n_conv1':n_conv1,'n_conv2':n_conv2,'n_layer':n_layer,'n_steps':n_steps,'n_lstm':n_lstm,'train step':step,'cost':cost})
 
                                         tstep=step+batch_num*per_batch
                                         train_writer.add_run_metadata(run_metadata, 'train_step%03d' % tstep)
-                                        train_writer.add_summary(train_summary, tstep)
-
+                                        if locate is False:
+                                            train_writer.add_summary(train_summary, tstep)
+                                            train_writer.add_summary(train_acc_summary, tstep)
+                                        else:
+                                            train_writer.add_summary(train_summary, tstep)
+                                            
                                         if step % val_step==0 and step!=0:
-                                            summary,guess,true,costv = session.run([nn.merged,nn.qhat,nn.qtrain_unflat, nn.cost], feed_dict={nn.qtrainPH: qtrue_val, nn.measPH: meas_img_val, nn.dropoutPH: dropout, nn.betaPH: beta})
+                                            if locate is False:
+                                                valid_summary,valid_acc_summary,costv,accv = session.run([nn.valid_summary,nn.valid_acc_summary, nn.cost, nn.accuracy], feed_dict={nn.qtrainPH: qtrue_val, nn.measPH: meas_img_val, nn.dropoutPH: dropout, nn.betaPH: beta})
+                                                train_writer.add_summary(valid_summary, tstep)
+                                                train_writer.add_summary(valid_acc_summary, tstep)
+                                            else:
+                                                valid_summary,costv = session.run([nn.valid_summary, nn.cost], feed_dict={nn.qtrainPH: qtrue_val, nn.measPH: meas_img_val, nn.dropoutPH: dropout, nn.betaPH: beta})
+                                                train_writer.add_summary(valid_summary, tstep)
+
                                             print "Val Step: ", step, "Cost: ",costv
 
                                             writer.writerow({'n_sensors':n_sensors,'n_dipoles':n_dipoles,'batches':batches,'learning rate':learning_rate,'batch_size':batch_size,'per_batch':per_batch,'dropout':dropout,'beta':beta,'k_conv':k_conv,'n_conv1':n_conv1,'n_conv2':n_conv2,'n_layer':n_layer,'n_lstm':n_lstm,'n_steps':n_steps,'train step':-1,'cost':costv})
-                                            train_writer.add_summary(summary, tstep)
+                                            
 
 
                                         step+=1
@@ -209,15 +219,12 @@ for locate in [False,1]:
 
                                 #test batch
                                 
-                                if rnn is False and cnn is not 'fft':
-                                    guess,true,costt = session.run([nn.qhat, nn.qtrain_unflat,nn.cost],feed_dict={nn.qtrainPH: qtrue_test, nn.measPH: meas_img_test, nn.dropoutPH: dropout, nn.betaPH: beta})
+                                if locate is False:
+                                    costt, acct = session.run([nn.cost, nn.accuracy],feed_dict={nn.qtrainPH: qtrue_test, nn.measPH: meas_img_test, nn.dropoutPH: dropout, nn.betaPH: beta})
                                 else:
-                                    guess,true,costt = session.run([nn.qhat_last, nn.qtrain_last,nn.cost],feed_dict={nn.qtrainPH: qtrue_test, nn.measPH: meas_img_test, nn.dropoutPH: dropout, nn.betaPH: beta})
+                                    costt = session.run([nn.cost],feed_dict={nn.qtrainPH: qtrue_test, nn.measPH: meas_img_test, nn.dropoutPH: dropout, nn.betaPH: beta})
                                 print "Test Step: ", step, "Cost: ", costt
                                 writer.writerow({'n_sensors':n_sensors,'n_dipoles':n_dipoles,'batches':batches,'learning rate':learning_rate,'batch_size':batch_size,'per_batch':per_batch,'dropout':dropout,'beta':beta,'k_conv':k_conv,'n_conv1':n_conv1,'n_conv2':n_conv2,'n_layer':n_layer,'n_lstm':n_lstm,'n_steps':n_steps,'train step':-2,'cost':costt})
 
-                                if locate is True: locate=1
-                                #if locate>0:
-                                    #pred_obs(guess, true, locate, name+str(-2))
                                     
                     csvfile.close()

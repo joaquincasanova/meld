@@ -78,6 +78,7 @@ def aud_dataset(selection='all',pca=False,subsample=1,justdims=True,cnn=True,loc
 
     epochs = mne.Epochs(raw, events, event_id, tmin, tmax, proj=True, picks=picks,
                         baseline=baseline, reject=reject, add_eeg_ref=False, preload=True,verbose=False)
+    #print epochs.info
     if treat is not None:
         epochs_eeg = epochs[treat].copy().pick_types(eeg=True,meg=False)
         epochs_meg = epochs[treat].copy().pick_types(meg=True,eeg=False)
@@ -154,7 +155,7 @@ def faces_dataset(subject_id,selection='all',pca=False,subsample=1,justdims=True
     eponame = '%s-epo.fif' % (subject) 
     epopath = os.path.join(os.path.join(meg_dir,subject),eponame)
     epochs = mne.read_epochs(epopath,verbose=False)
-
+    #print epochs.info
     if treat is not None:
         epochs_eeg = epochs[treat].copy().pick_types(eeg=True,meg=False)
         epochs_meg = epochs[treat].copy().pick_types(meg=True,eeg=False)       

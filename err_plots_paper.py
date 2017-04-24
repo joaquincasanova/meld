@@ -32,7 +32,7 @@ for subject_id in ['aud',7]:
 
 
                         fieldnames=['batches','learning rate','batch_size','per_batch','dropout','beta','k_conv','n_conv1','n_conv2','n_layer','n_lstm','n_steps','train step','cost']
-                        name='/home/jcasa/meld/tnrse2017/tf1_subject_%s_pca_all_%s_rand_%s_cnn_%s_rnn_%s_locate_%s_treat_%s' % (subject_id, pca, rand_test, cnn, rnn,locate,lab_treat)
+                        name='/home/jcasa/meld/tnrse2017/tf1_steps_subject_%s_pca_all_%s_rand_%s_cnn_%s_rnn_%s_locate_%s_treat_%s' % (subject_id, pca, rand_test, cnn, rnn,locate,lab_treat)
                         fname = name + '.csv' 
 
                         data=np.zeros([1,10])
@@ -88,7 +88,7 @@ for subject_id in ['aud',7]:
                     col_n_lstm=8
                     col_cost=9
 
-                    params_list = [[3,2,3,10,2,.2,.1,.1]]
+                    params_list = [[3,3,5,10,2,.2,.1,.1]]
 
                     err_col=9
 
