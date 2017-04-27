@@ -52,3 +52,9 @@ plt.axes().set_aspect('equal', 'datalim')
                 #zhat = self.qhat_last[:,2]
                 
                 #self.rmse_last = tf.add(tf.sqrt(tf.reduce_mean(tf.square(tf.sub(x,xhat))+tf.square(tf.sub(x,xhat))+tf.square(tf.sub(x,xhat))),name="rmse"),self.reg)
+name = str(subject_id)+'_'+str(rnn)+'_'+str(cnn)
+                                if rnn is True:
+                                	guess,true = session.run([nn.qhat_last, nn.qtrain_last],feed_dict={nn.qtrainPH: qtrue, nn.measPH: meas_img, nn.dropoutPH: dropout, nn.betaPH: beta})
+                                else:
+                                	guess,true = session.run([nn.qhat, nn.qtrain_unflat],feed_dict={nn.qtrainPH: qtrue, nn.measPH: meas_img, nn.dropoutPH: dropout, nn.betaPH: beta})
+                                pred_obs(guess,true,locate,name)

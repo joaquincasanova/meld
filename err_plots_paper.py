@@ -12,7 +12,7 @@ pca=True
 rand_test=True
 for subject_id in ['aud',7]:
     idx = 0
-    for locate in [1]:
+    for locate in [100]:
         if locate  is False:
             subsample=1
         for cnn in [True,False]:
@@ -88,7 +88,7 @@ for subject_id in ['aud',7]:
                     col_n_lstm=8
                     col_cost=9
 
-                    params_list = [[3,3,5,10,2,.2,.1,.1]]
+                    params_list = [[3,3,5,10,3,.2,.2,.2]]
 
                     err_col=9
 

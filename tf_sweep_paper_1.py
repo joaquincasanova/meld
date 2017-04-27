@@ -50,7 +50,7 @@ beta = 0.
 subsample = 1
 params_list = [[3,3,5,10,3,.2,.2,.2]]
 
-for locate in [1]:
+for locate in [100]:
     for cnn in [True,False]:
         for rnn in [True,False]:
             for subject_id in ['aud',7]:
@@ -138,7 +138,7 @@ for locate in [1]:
                             nn.initializer()     
 
                             with tf.Session() as session:
-                                logdir = '/tmp/tensorflowlogs/tnrse2017_tf1_steps/sub_%s/pca_all_%s/rand_%s/cnn_%s/rnn_%s/locate_knn_%s/treat_%s/' % (subject_id,pca,rand_test,cnn,rnn,locate,lab_treat)
+                                logdir = '/tmp/tensorflowlogs/tnrse2017_tf1/sub_%s/pca_all_%s/rand_%s/cnn_%s/rnn_%s/locate_knn_%s/treat_%s/' % (subject_id,pca,rand_test,cnn,rnn,locate,lab_treat)
                                 if tf.gfile.Exists(logdir):
                                     tf.gfile.DeleteRecursively(logdir)
                                 tf.gfile.MakeDirs(logdir)
@@ -172,7 +172,7 @@ for locate in [1]:
                                         if step % print_step==0:
                                             print "Train Step: ", step, "Cost: ",cost                                              
 
-                                        if step % plot_step==0:
+                                        if False:#step % plot_step==0:
                                             name = str(subject_id)+'_'+str(batch_num)+'_'+str(step)+'_'+str(rnn)+'_'+str(cnn)
                                             if rnn is True:
                                                 guess,true = session.run([nn.qhat_last, nn.qtrain_last],feed_dict={nn.qtrainPH: qtrue, nn.measPH: meas_img, nn.dropoutPH: dropout, nn.betaPH: beta})
@@ -216,5 +216,8 @@ for locate in [1]:
                                     costt = session.run([nn.cost],feed_dict={nn.qtrainPH: qtrue_test, nn.measPH: meas_img_test, nn.dropoutPH: dropout, nn.betaPH: beta})
                                 print "Test Step: ", step, "Cost: ", costt
                                 writer.writerow({'batches':batches,'learning rate':learning_rate,'batch_size':batch_size,'per_batch':per_batch,'dropout':dropout,'beta':beta,'k_conv':k_conv,'n_conv1':n_conv1,'n_conv2':n_conv2,'n_layer':n_layer,'n_lstm':n_lstm,'n_steps':n_steps,'train step':-2,'cost':costt})
+                                        
+                                
+
                                     
                     csvfile.close()
