@@ -1,1 +1,0 @@
-batches,learning rate,batch_size,per_batch,dropout,beta,k_conv,n_conv1,n_conv2,n_layer,n_lstm,n_steps,train step,cost
