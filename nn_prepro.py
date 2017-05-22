@@ -11,7 +11,60 @@ from mne.datasets import sample
 from mne.minimum_norm import (make_inverse_operator, apply_inverse,
                               write_inverse_operator, apply_inverse_epochs,
                               read_inverse_operator)
+import pickle
 
+def rat_real(stim='Tones',selection='all',pca=True,subsample=1,justdims=True,cnn=False,locate=True,treat=None,rnn=False,Wt=None):
+
+    if stim='Tones':
+        name = '/home/jcasa/meld/code/python/rattest/ECOG_MEG_Tones.grouped.pickle'
+    elif stim=='P1':
+        name = '/home/jcasa/meld/code/python/rattest/ECOG_MEG_P1.grouped.pickle'
+    with open(name, 'w') as f:
+        b = pickle.load(f)
+    ecog_data=np.transpose(np.array(b["ECoG_average"]),(1,2,0))#pxnxb - for dipole scaling
+    eeg_data=np.transpose(np.array(b["ECoG_average"]),(0,1,2))
+    meg_data=np.transpose(np.array(b["MEG_average"],(0,1,2))#bxmxn - for meas_class pca formatting
+    fs_MEG=b["fs_MEG"]
+    fs_ECoG=b["fs_ECoG"]
+    flag=b["flag"]
+    n_treat=b["n_treat"]
+    treatments=b["treatments"]
+    meg_xyz=b["meg_xyz"]#mx3
+    ecog_xyz=b["ecog_xyz"]
+    n_chan_in=1
+    m = meg_data.shape[2]
+    p = ecog_data.shape[2]
+    n_steps = ecog_data.shape[1]
+    total_batch_size = ecog_data.shape[0]
+    meas_dims=m
+
+    if pca:
+                          tf_meas = meas_class.meas(meg_data,meg_xyz,eeg_data,ecog_xyz, meas_dims, n_steps, total_batch_size)
+                          Wt=tf_meas.pca()
+                          tf_meas.stack_reshape(n_chan_in=1)#ignore ecog - just a placeholder
+                          meas_img_all = tf_meas.meas_stack[0]
+
+    #scale dipoles ~ ecog
+    if rnn:
+        if locate is False:
+            qtrue_all, p = scale_dipoleXYZT_OH(ecog_data,subsample=subsample)
+        else:
+            qtrue_all = location_rat_XYZT(locate,total_batch_size,n_steps,p,ecog_data, ecog_xyz)
+        if locate is False:
+            qtrue_all, p = scale_dipole(ecog_data,subsample=subsample)
+        else:
+            qtrue_all = location_rat(locate,total_batch_size,n_steps,p,ecog_data, ecog_xyz)
+
+
+    if justdims is True:
+        return meas_dims, m, p, n_steps, batch_size, Wt
+    else:
+        if selection is 'all':
+            return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, batch_size, Wt 
+        else:
+            return meas_img_all[selection,:,:], qtrue_all[selection,:,:], meas_dims, m, p, n_steps, np.size(selection), Wt 
+
+    
 def rat_synth(total_batch_size,delT,n_steps,meas_dims,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True,selection='all',pca=False,subsample=1,justdims=True,cnn=True,locate=True,treat=None,rnn=True,Wt=None):
     
     if selection is 'all':
