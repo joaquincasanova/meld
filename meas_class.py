@@ -57,6 +57,10 @@ class meas:
         print self.m1, " EEG sensors"
         MEG=np.transpose(meg_meas_in,(1,0,2)).reshape([self.m0,-1])
         EEG=np.transpose(eeg_meas_in,(1,0,2)).reshape([self.m1,-1])
+        
+        print 'MEG array: ',MEG.shape
+        print 'EEG array: ',EEG.shape
+        
         self.meas_in = [MEG, EEG]#[m0|m1]xbatch_size*n_steps
         self.meas_xyz = [meg_meas_xyz, eeg_meas_xyz]#m0x3,m1x3
         self.meas_dims= meas_dims
@@ -132,6 +136,10 @@ class meas:
                     mPCA.Wt=Wt[channel]
                     self.meas_in[channel]=mPCA.Y
                 print 'Wt shape: ',mPCA.Wt.shape
+                
+        print 'PCA MEG: ',self.meas_in[0].shape
+        print 'PCA EEG: ',self.meas_in[1].shape
+        
         return Wt
     def scale(self):
         for channel in [0,1]:
@@ -146,6 +154,8 @@ class meas:
         else:
             self.meas_stack=np.vstack((self.meas_in[0]))#[m0]xbatch_size*n_steps
             self.m=self.m0
+            print 'PCA MEG stack: ',self.meas_in[0].shape,self.m,self.batch_size,self.n_steps
+        
             self.meas_stack=self.meas_stack.reshape((self.m,self.batch_size,self.n_steps))#[m0]xbatch_sizexn_steps
             self.meas_stack=self.meas_stack.transpose((1,2,0))#batch_sizexn_stepsx[m0+m1]
 

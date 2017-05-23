@@ -50,8 +50,8 @@ beta = 0.
 subsample = 1
 params_list = [[3,3,5,10,3,.2,.2,.2]]
 
-for cv_run in [3,4]:
-    for locate in [10]:
+for cv_run in [1, 2, 3, 4]:
+    for locate in [1]:
         for cnn in [True,False]:
             for rnn in [True,False]:
                 for subject_id in ['aud',7]:

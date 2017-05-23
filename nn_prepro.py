@@ -14,16 +14,16 @@ from mne.minimum_norm import (make_inverse_operator, apply_inverse,
 import pickle
 
 def rat_real(stim='Tones',selection='all',pca=True,subsample=1,justdims=True,cnn=False,locate=True,treat=None,rnn=False,Wt=None):
-
-    if stim='Tones':
-        name = '/home/jcasa/meld/code/python/rattest/ECOG_MEG_Tones.grouped.pickle'
+    print 'selection ',selection
+    if stim=='Tones':
+        name = '/home/jcasa/meld/code/python/rattest/processed/ECOG_MEG_Tones.grouped.pickle'
     elif stim=='P1':
-        name = '/home/jcasa/meld/code/python/rattest/ECOG_MEG_P1.grouped.pickle'
-    with open(name, 'w') as f:
+        name = '/home/jcasa/meld/code/python/rattest/processed/ECOG_MEG_P1.grouped.pickle'
+    with open(name, 'r') as f:
         b = pickle.load(f)
     ecog_data=np.transpose(np.array(b["ECoG_average"]),(1,2,0))#pxnxb - for dipole scaling
     eeg_data=np.transpose(np.array(b["ECoG_average"]),(0,1,2))
-    meg_data=np.transpose(np.array(b["MEG_average"],(0,1,2))#bxmxn - for meas_class pca formatting
+    meg_data=np.transpose(np.array(b["MEG_average"]),(0,1,2))#bxmxn - for meas_class pca formatting
     fs_MEG=b["fs_MEG"]
     fs_ECoG=b["fs_ECoG"]
     flag=b["flag"]
@@ -32,35 +32,46 @@ def rat_real(stim='Tones',selection='all',pca=True,subsample=1,justdims=True,cnn
     meg_xyz=b["meg_xyz"]#mx3
     ecog_xyz=b["ecog_xyz"]
     n_chan_in=1
-    m = meg_data.shape[2]
-    p = ecog_data.shape[2]
-    n_steps = ecog_data.shape[1]
-    total_batch_size = ecog_data.shape[0]
+    n_steps = meg_data.shape[2]
+    total_batch_size = ecog_data.shape[2]
+    m = meg_data.shape[1]
+    p = ecog_data.shape[0]
     meas_dims=m
-
+    print 'n_steps', n_steps, 'total_batch_size', total_batch_size, 'm', m, 'p', p
+    print 'MEG array: ',meg_data.shape
+    print 'ECOG array: ',ecog_data.shape
+    print 'fake EEG array: ',eeg_data.shape
     if pca:
-                          tf_meas = meas_class.meas(meg_data,meg_xyz,eeg_data,ecog_xyz, meas_dims, n_steps, total_batch_size)
-                          Wt=tf_meas.pca()
-                          tf_meas.stack_reshape(n_chan_in=1)#ignore ecog - just a placeholder
-                          meas_img_all = tf_meas.meas_stack[0]
-
+        tf_meas = meas_class.meas(meg_data,meg_xyz,eeg_data,ecog_xyz, meas_dims, n_steps, total_batch_size)
+        Wt=tf_meas.pca()
+        tf_meas.stack_reshape(n_chan_in=1)#ignore ecog - just a placeholder
+        meas_img_all = tf_meas.meas_stack
+    else:
+        meas_img_all = np.transpose(meg_data,(0,2,1))
+                          
     #scale dipoles ~ ecog
+    print 'Locate: ',locate
     if rnn:
         if locate is False:
-            qtrue_all, p = scale_dipoleXYZT_OH(ecog_data,subsample=subsample)
+            qtrue_all, p = meas_class.scale_dipoleXYZT_OH(ecog_data,subsample=subsample)
         else:
             qtrue_all = location_rat_XYZT(locate,total_batch_size,n_steps,p,ecog_data, ecog_xyz)
+            p=3
+    else:
         if locate is False:
-            qtrue_all, p = scale_dipole(ecog_data,subsample=subsample)
+            qtrue_all, p = meas_class.scale_dipole(ecog_data,subsample=subsample)
         else:
             qtrue_all = location_rat(locate,total_batch_size,n_steps,p,ecog_data, ecog_xyz)
-
+            p=3
 
     if justdims is True:
-        return meas_dims, m, p, n_steps, batch_size, Wt
+        return meas_dims, m, p, n_steps, total_batch_size, Wt
     else:
+        print 'meas_img_all ',meas_img_all.shape
+        print 'qtrue_all ',qtrue_all.shape
+        
         if selection is 'all':
-            return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, batch_size, Wt 
+            return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size, Wt 
         else:
             return meas_img_all[selection,:,:], qtrue_all[selection,:,:], meas_dims, m, p, n_steps, np.size(selection), Wt 
 

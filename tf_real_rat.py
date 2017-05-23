@@ -51,11 +51,11 @@ for locate in [False,1]:
     if locate  is False:
         subsample=1
     for cnn in [False]:
-        params_list = [[3,3,5,8,4,.2,.1,.1,4,16]
+        params_list = [[3,3,5,8,4,.2,.1,.1,4,16]]
         for rnn in [False]:
             for subject_id in ['rat']:
-                treats=[None]
-                for stim in ['P1','Tones']:
+                treat=None
+                for stim in ['Tones','P1']:
                     lab_treat='None'
                         
                     print 'Subject: ',subject_id,' PCA: ',pca,' Random: ',rand_test, ' CNN: ',cnn, ' RNN: ',rnn, 'Locate: ',locate, 'Treat: ',lab_treat
@@ -70,15 +70,16 @@ for locate in [False,1]:
 
                         for [k_conv, n_conv1, n_conv2, n_lstm, n_layer, test_frac, val_frac, batch_frac, n_sensors, n_dipoles] in params_list:
                             n_chan_in=1
-                            meas_dims, m, p, n_steps, total_batch_size, Wt = nn.prepro.rat_real(stim=stim,selection='all',pca=True,subsample=1,justdims=True,cnn=False,locate=locate,treat=treat,rnn=rnn,Wt=None)
+                            meas_dims, m, p, n_steps, total_batch_size, Wt = nn_prepro.rat_real(stim=stim,selection='all',pca=True,subsample=1,justdims=True,cnn=False,locate=locate,treat=treat,rnn=rnn,Wt=None)
                             test, val, batch_list, batches = nn_prepro.ttv(total_batch_size,test_frac,val_frac,batch_frac,rand_test=rand_test)
 
                             per_batch = int(5000/batches)
-                            meas_img_test, qtrue_test, meas_dims, m, p, n_steps, test_size, Wt = nn.prepro.rat_real(stim=stim,selection=test,pca=True,subsample=1,justdims=True,cnn=False,locate=locate,treat=treat,rnn=rnn,Wt=None)
-                            print "Test batch "#,test
+                            
+                            print "Test batch ",test
+                            meas_img_test, qtrue_test, meas_dims, m, p, n_steps, test_size, Wt = nn_prepro.rat_real(stim=stim,selection=test,pca=True,subsample=1,justdims=False,cnn=False,locate=locate,treat=treat,rnn=rnn,Wt=None)
 
-                            meas_img_val, qtrue_val, meas_dims, m, p, n_steps, val_size, Wt = nn.prepro.rat_real(stim=stim,selection=val,pca=True,subsample=1,justdims=True,cnn=False,locate=locate,treat=treat,rnn=rnn,Wt=None)
-                            print "Val batch "#,val
+                            print "Val batch ",val
+                            meas_img_val, qtrue_val, meas_dims, m, p, n_steps, val_size, Wt = nn_prepro.rat_real(stim=stim,selection=val,pca=True,subsample=1,justdims=False,cnn=False,locate=locate,treat=treat,rnn=rnn,Wt=None)
 
                             n_out=p
                             k_pool=1
@@ -105,9 +106,9 @@ for locate in [False,1]:
                                     err_l_prev = 1000.
                                     err_l = 500.
                                     batch = batch_list[batch_num]
-                                    print "Train batch ", batch_num#, batch
+                                    print "Train batch ", batch_num, batch
                                     #pick a first batch of batch_size
-                                    meas_img_all, qtrue_all, meas_dims, m, p, n_steps, batch_size, Wt = nn.prepro.rat_real(stim=stim,selection=val,pca=True,subsample=1,justdims=True,cnn=False,locate=locate,treat=treat,rnn=rnn,Wt=None)
+                                    meas_img_all, qtrue_all, meas_dims, m, p, n_steps, batch_size, Wt = nn_prepro.rat_real(stim=stim,selection=val,pca=True,subsample=1,justdims=False,cnn=False,locate=locate,treat=treat,rnn=rnn,Wt=None)
 
                                     step=0
                                     while step<per_batch:
@@ -115,9 +116,9 @@ for locate in [False,1]:
                                         run_metadata = tf.RunMetadata()
 
                                         if locate is False:
-                                            train_summary,train_acc_summary, _ ,cost,acc = session.run([nn.train_summary,nn.train_acc_summary, nn.train_step, nn.cost, nn.accuracy],feed_dict={nn.qtrainPH: qtrue, nn.measPH: meas_img, nn.dropoutPH: dropout, nn.betaPH: beta})
+                                            train_summary,train_acc_summary, _ ,cost,acc = session.run([nn.train_summary,nn.train_acc_summary, nn.train_step, nn.cost, nn.accuracy],feed_dict={nn.qtrainPH: qtrue_all, nn.measPH: meas_img_all, nn.dropoutPH: dropout, nn.betaPH: beta})
                                         else:
-                                            train_summary, _ ,cost = session.run([nn.train_summary, nn.train_step, nn.cost],feed_dict={nn.qtrainPH: qtrue, nn.measPH: meas_img, nn.dropoutPH: dropout, nn.betaPH: beta})
+                                            train_summary, _ ,cost = session.run([nn.train_summary, nn.train_step, nn.cost],feed_dict={nn.qtrainPH: qtrue_all, nn.measPH: meas_img_all, nn.dropoutPH: dropout, nn.betaPH: beta})
 
                                         if step % print_step==0:
                                             print "Train Step: ", step, "Cost: ",cost                                              
