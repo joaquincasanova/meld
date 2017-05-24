@@ -14,33 +14,38 @@ from mne.minimum_norm import (make_inverse_operator, apply_inverse,
 import pickle
 
 def rat_real(stim='Tones',selection='all',pca=True,subsample=1,justdims=True,cnn=False,locate=True,treat=None,rnn=False,Wt=None):
-    print 'selection ',selection
+    #print 'selection ',selection
+    ecog_thresh = 1e-5
     if stim=='Tones':
         name = '/home/jcasa/meld/code/python/rattest/processed/ECOG_MEG_Tones.grouped.pickle'
     elif stim=='P1':
         name = '/home/jcasa/meld/code/python/rattest/processed/ECOG_MEG_P1.grouped.pickle'
+    elif stim=='P0':
+        name = '/home/jcasa/meld/code/python/rattest/processed/MEG_ECOG.grouped.pickle'
     with open(name, 'r') as f:
         b = pickle.load(f)
     ecog_data=np.transpose(np.array(b["ECoG_average"]),(1,2,0))#pxnxb - for dipole scaling
     eeg_data=np.transpose(np.array(b["ECoG_average"]),(0,1,2))
+    ecog_data[abs(ecog_data)>ecog_thresh]=100e-9#A
+    #eeg_data[abs(eeg_data)>ecog_thresh]=100e-6#V
     meg_data=np.transpose(np.array(b["MEG_average"]),(0,1,2))#bxmxn - for meas_class pca formatting
     fs_MEG=b["fs_MEG"]
     fs_ECoG=b["fs_ECoG"]
     flag=b["flag"]
     n_treat=b["n_treat"]
     treatments=b["treatments"]
-    meg_xyz=b["meg_xyz"]#mx3
-    ecog_xyz=b["ecog_xyz"]
+    meg_xyz=b["meg_xyz"]/1000.#mx3
+    ecog_xyz=b["ecog_xyz"]/1000.#in meters
     n_chan_in=1
     n_steps = meg_data.shape[2]
     total_batch_size = ecog_data.shape[2]
     m = meg_data.shape[1]
     p = ecog_data.shape[0]
     meas_dims=m
-    print 'n_steps', n_steps, 'total_batch_size', total_batch_size, 'm', m, 'p', p
-    print 'MEG array: ',meg_data.shape
-    print 'ECOG array: ',ecog_data.shape
-    print 'fake EEG array: ',eeg_data.shape
+    #print 'n_steps', n_steps, 'total_batch_size', total_batch_size, 'm', m, 'p', p
+    #print 'MEG array: ',meg_data.shape
+    #print 'ECOG array: ',ecog_data.shape
+    #print 'fake EEG array: ',eeg_data.shape
     if pca:
         tf_meas = meas_class.meas(meg_data,meg_xyz,eeg_data,ecog_xyz, meas_dims, n_steps, total_batch_size)
         Wt=tf_meas.pca()
@@ -50,25 +55,25 @@ def rat_real(stim='Tones',selection='all',pca=True,subsample=1,justdims=True,cnn
         meas_img_all = np.transpose(meg_data,(0,2,1))
                           
     #scale dipoles ~ ecog
-    print 'Locate: ',locate
+    #print 'Locate: ',locate
     if rnn:
         if locate is False:
             qtrue_all, p = meas_class.scale_dipoleXYZT_OH(ecog_data,subsample=subsample)
         else:
-            qtrue_all = location_rat_XYZT(locate,total_batch_size,n_steps,p,ecog_data, ecog_xyz)
             p=3
+            qtrue_all = location_rat_XYZT(locate,total_batch_size,n_steps,p,ecog_data, ecog_xyz)
     else:
         if locate is False:
             qtrue_all, p = meas_class.scale_dipole(ecog_data,subsample=subsample)
         else:
-            qtrue_all = location_rat(locate,total_batch_size,n_steps,p,ecog_data, ecog_xyz)
             p=3
+            qtrue_all = location_rat(locate,total_batch_size,n_steps,p,ecog_data, ecog_xyz)
 
     if justdims is True:
         return meas_dims, m, p, n_steps, total_batch_size, Wt
     else:
-        print 'meas_img_all ',meas_img_all.shape
-        print 'qtrue_all ',qtrue_all.shape
+        #print 'meas_img_all ',meas_img_all.shape
+        #print 'qtrue_all ',qtrue_all.shape
         
         if selection is 'all':
             return meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size, Wt 
@@ -727,23 +732,28 @@ def ttv(total,test_frac,val_frac,batch_frac,rand_test=True):
     return test, val, batch_list, batches
             
 def location_rat(locate,batch_size,n_steps,p,dipole, dipole_xyz):
+    #print "xyz ", dipole_xyz.shape
     qtrue_all = np.zeros([batch_size,n_steps,p])
     for s in range(0,dipole.shape[2]):
         mxloca = np.argsort(np.abs(dipole[:,:,s]),axis=0)#dipole is pxnxb
         mxloc=mxloca[-1-locate:-1,:]#locatexn
         loc=dipole_xyz[np.ravel(mxloc),:]#locate*nx3
+        #print "loc ", loc.shape
         loc=np.transpose(loc.reshape([-1,n_steps,3]),(1,0,2)).reshape([-1,locate*3])#nx3*locate=nxp
         qtrue_all[s,:,:]=loc#m
     return qtrue_all*1000#mm
 
 def location_rat_XYZT(locate,batch_size,n_steps,p,dipole, dipole_xyz):
+    #print "xyz ", dipole_xyz.shape
     qtrue_all = np.zeros([batch_size,n_steps,p])
     for s in range(0,dipole.shape[2]):
         #max location (index)
         [i,j] = np.unravel_index(np.argsort(np.ravel(np.abs(dipole[:,:,s]))),dipole[:,:,s].shape)
         I,J=i[-1-locate:-1],j[-1-locate:-1]#I is neuron index,J is temporal index
         loc=dipole_xyz[I,:]#locatex3
+        #print "loc ", loc.shape
         loc=loc.reshape([-1])#->locate*3
+        #print "loc ", loc.shape
         qtrue_all[s,-1,:]=loc#m
     return qtrue_all*1000.#mm
 

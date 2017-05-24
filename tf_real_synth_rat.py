@@ -46,7 +46,7 @@ learning_rate = 0.005
 dropout = 1.
 beta = 0.
 
-for locate in [1,False]:
+for locate in [1]:
     subsample = 1
     if locate  is False:
         subsample=1
@@ -61,7 +61,7 @@ for locate in [1,False]:
                     print 'Subject: ',subject_id,' PCA: ',pca,' Random: ',rand_test, ' CNN: ',cnn, ' RNN: ',rnn, 'Locate: ',locate, 'Treat: ',lab_treat
                        
                     fieldnames=['n_sensors','n_dipoles','batches','learning rate','batch_size','per_batch','dropout','beta','k_conv','n_conv1','n_conv2','n_layer','n_lstm','n_steps','train step','cost']
-                    name='../data/tf1_subject_ecogthresh_%s_pca_all_%s_rand_%s_cnn_%s_rnn_%s_locate_%s_treat_%s_hidden' % (subject_id, pca, rand_test, cnn, rnn,locate,lab_treat)
+                    name='../data/tf1_subject_synth_ecogthresh_%s_pca_all_%s_rand_%s_cnn_%s_rnn_%s_locate_%s_treat_%s_hidden' % (subject_id, pca, rand_test, cnn, rnn,locate,lab_treat)
                     fname = name + '.csv' 
 
                     with open(fname,'a') as csvfile:
@@ -69,9 +69,20 @@ for locate in [1,False]:
                         writer.writeheader()
 
                         for [k_conv, n_conv1, n_conv2, n_lstm, n_layer, test_frac, val_frac, batch_frac, n_sensors, n_dipoles] in params_list:
+
                             n_chan_in=1
                             meas_dims, m, p, n_steps, total_batch_size, Wt = nn_prepro.rat_real(stim=stim,selection='all',pca=True,subsample=1,justdims=True,cnn=False,locate=locate,treat=treat,rnn=rnn,Wt=None)
-                            test, val, batch_list, batches = nn_prepro.ttv(total_batch_size,test_frac,val_frac,batch_frac,rand_test=rand_test)
+
+                            total_batch_size_synth=int(total_batch_size/test_frac)
+                            delT=1./1017.
+                            meas_dims_in=[n_sensors,1]
+                            dipole_dims=[2,2,4]
+
+                            meas_dims, m, p, n_steps, total_batch_size, Wt_synth = nn_prepro.rat_synth(total_batch_size,delT,n_steps,meas_dims_in,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True,selection='all',pca=True,subsample=1,justdims=True,cnn=cnn,locate=locate,treat=None,rnn=rnn,Wt=None)
+                            meas_dims, m, p, n_steps, total_batch_size, Wt_synth = nn_prepro.rat_synth(total_batch_size,delT,n_steps,meas_dims_in,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True,selection='all',pca=True,subsample=1,justdims=True,cnn=cnn,locate=locate,treat=treat,rnn=rnn,Wt=Wt_synth)
+
+                            test, val, batch_list, batches = nn_prepro.ttv(total_batch_size,.5,.5,0.0,rand_test=rand_test)
+                            test_synth, val_synth, batch_list, batches = nn_prepro.ttv(total_batch_size_synth,test_frac,val_frac,batch_frac,rand_test=rand_test)
 
                             per_batch = int(5000/batches)
                             
@@ -94,7 +105,7 @@ for locate in [1,False]:
                             nn.initializer()     
 
                             with tf.Session() as session:
-                                logdir = '/tmp/tensorflowlogs/tf1_sub_real_thresh_%s_%s/rnn_%s/n_dipoles_%s/locate_knn_%s/' % (subject_id,stim,rnn,n_dipoles,locate)
+                                logdir = '/tmp/tensorflowlogs/tf1_sub_real_synth_thresh_%s_%s/rnn_%s/n_dipoles_%s/locate_knn_%s/' % (subject_id,stim,rnn,n_dipoles,locate)
                                 if tf.gfile.Exists(logdir):
                                     tf.gfile.DeleteRecursively(logdir)
                                 tf.gfile.MakeDirs(logdir)
@@ -108,8 +119,8 @@ for locate in [1,False]:
                                     batch = batch_list[batch_num]
                                     print "Train batch ", batch_num, batch
                                     #pick a first batch of batch_size
-                                    meas_img_all, qtrue_all, meas_dims, m, p, n_steps, batch_size, Wt = nn_prepro.rat_real(stim=stim,selection=batch,pca=True,subsample=1,justdims=False,cnn=False,locate=locate,treat=treat,rnn=rnn,Wt=None)
-
+                                    #meas_img_all, qtrue_all, meas_dims, m, p, n_steps, batch_size, Wt = nn_prepro.rat_real(stim=stim,selection=val,pca=True,subsample=1,justdims=False,cnn=False,locate=locate,treat=treat,rnn=rnn,Wt=None)
+                                    meas_img_all, qtrue_all, meas_dims, m, p, n_steps, batch_size,Wt = nn_prepro.rat_synth(total_batch_size_synth,delT,n_steps,meas_dims_in,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True,selection=batch,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,rnn=rnn,Wt=Wt)
                                     step=0
                                     while step<per_batch:
                                         run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
