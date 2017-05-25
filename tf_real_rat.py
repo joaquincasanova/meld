@@ -30,7 +30,11 @@ def pred_obs(guess,true,locate,name):
         ax = fig.gca(projection='3d')
         ax.plot(x, y, z, 'ob')
         ax.plot(xt, yt, zt, 'or')
-        plt.title('Number '+str(l))
+        plt.title('Stimulus '+name)
+        ax.set_xlim(-16, 16)
+        ax.set_ylim(-16, 16)
+        ax.set_zlim(-16, 16)
+
         plt.savefig(name+'.png')
         plt.close()
     ###############################################################################
@@ -153,7 +157,8 @@ for locate in [1,False]:
                                 if locate is False:
                                     costt, acct = session.run([nn.cost, nn.accuracy],feed_dict={nn.qtrainPH: qtrue_test, nn.measPH: meas_img_test, nn.dropoutPH: dropout, nn.betaPH: beta})
                                 else:
-                                    costt = session.run([nn.cost],feed_dict={nn.qtrainPH: qtrue_test, nn.measPH: meas_img_test, nn.dropoutPH: dropout, nn.betaPH: beta})
+                                    costt, guess, true  = session.run([nn.cost, nn.qhat, nn.qtrain_unflat],feed_dict={nn.qtrainPH: qtrue_test, nn.measPH: meas_img_test, nn.dropoutPH: dropout, nn.betaPH: beta})
+                                    pred_obs(guess,true,locate,stim)
                                 print "Test Step: ", step, "Cost: ", costt
                                 writer.writerow({'n_sensors':n_sensors,'n_dipoles':n_dipoles,'batches':batches,'learning rate':learning_rate,'batch_size':batch_size,'per_batch':per_batch,'dropout':dropout,'beta':beta,'k_conv':k_conv,'n_conv1':n_conv1,'n_conv2':n_conv2,'n_layer':n_layer,'n_lstm':n_lstm,'n_steps':n_steps,'train step':-2,'cost':costt})
 

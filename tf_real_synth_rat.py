@@ -12,7 +12,6 @@ from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
 from matplotlib.ticker import LinearLocator, FormatStrFormatter
 import matplotlib.pyplot as plt
-
 def pred_obs(guess,true,locate,name):
     for l in range(0,locate):
         #guess=sphere.sph2cartMatNB(guess)
@@ -30,11 +29,14 @@ def pred_obs(guess,true,locate,name):
         ax = fig.gca(projection='3d')
         ax.plot(x, y, z, 'ob')
         ax.plot(xt, yt, zt, 'or')
-        plt.title('Number '+str(l))
+        plt.title('Stimulus '+name)
+        ax.set_xlim(-16, 16)
+        ax.set_ylim(-16, 16)
+        ax.set_zlim(-16, 16)
+
         plt.savefig(name+'.png')
         plt.close()
     ###############################################################################
-
 #meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size=nn_prepro.aud_dataset(pca=True, subsample=10)
 
 pca = True
@@ -82,9 +84,9 @@ for locate in [1]:
                             meas_dims, m, p, n_steps, total_batch_size, Wt_synth = nn_prepro.rat_synth(total_batch_size,delT,n_steps,meas_dims_in,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True,selection='all',pca=True,subsample=1,justdims=True,cnn=cnn,locate=locate,treat=treat,rnn=rnn,Wt=Wt_synth)
 
                             test, val, batch_list, batches = nn_prepro.ttv(total_batch_size,.5,.5,0.0,rand_test=rand_test)
-                            test_synth, val_synth, batch_list, batches = nn_prepro.ttv(total_batch_size_synth,test_frac,val_frac,batch_frac,rand_test=rand_test)
+                            test_synth, val_synth, batch_list_synth, batches_synth = nn_prepro.ttv(total_batch_size_synth,test_frac,val_frac,batch_frac,rand_test=rand_test)
 
-                            per_batch = int(5000/batches)
+                            per_batch = int(5000/batches_synth)
                             
                             print "Test batch ",test
                             meas_img_test, qtrue_test, meas_dims, m, p, n_steps, test_size, Wt = nn_prepro.rat_real(stim=stim,selection=test,pca=True,subsample=1,justdims=False,cnn=False,locate=locate,treat=treat,rnn=rnn,Wt=None)
@@ -113,14 +115,13 @@ for locate in [1]:
 
                                 session.run(nn.init_step)
 
-                                for batch_num in range(0,batches):
+                                for batch_num in range(0,batches_synth):
                                     err_l_prev = 1000.
                                     err_l = 500.
-                                    batch = batch_list[batch_num]
+                                    batch = batch_list_synth[batch_num]
                                     print "Train batch ", batch_num, batch
                                     #pick a first batch of batch_size
-                                    #meas_img_all, qtrue_all, meas_dims, m, p, n_steps, batch_size, Wt = nn_prepro.rat_real(stim=stim,selection=val,pca=True,subsample=1,justdims=False,cnn=False,locate=locate,treat=treat,rnn=rnn,Wt=None)
-                                    meas_img_all, qtrue_all, meas_dims, m, p, n_steps, batch_size,Wt = nn_prepro.rat_synth(total_batch_size_synth,delT,n_steps,meas_dims_in,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True,selection=batch,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,rnn=rnn,Wt=Wt)
+                                    meas_img_all, qtrue_all, meas_dims, m, p, n_steps, batch_size,Wt = nn_prepro.rat_synth(total_batch_size_synth,delT,n_steps,meas_dims_in,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True,selection=batch,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,rnn=rnn,Wt=Wt_synth)
                                     step=0
                                     while step<per_batch:
                                         run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
@@ -164,7 +165,8 @@ for locate in [1]:
                                 if locate is False:
                                     costt, acct = session.run([nn.cost, nn.accuracy],feed_dict={nn.qtrainPH: qtrue_test, nn.measPH: meas_img_test, nn.dropoutPH: dropout, nn.betaPH: beta})
                                 else:
-                                    costt = session.run([nn.cost],feed_dict={nn.qtrainPH: qtrue_test, nn.measPH: meas_img_test, nn.dropoutPH: dropout, nn.betaPH: beta})
+                                    costt, guess, true = session.run([nn.cost, nn.qhat, nn.qtrain_unflat],feed_dict={nn.qtrainPH: qtrue_test, nn.measPH: meas_img_test, nn.dropoutPH: dropout, nn.betaPH: beta})
+                                    pred_obs(guess,true,locate,stim)
                                 print "Test Step: ", step, "Cost: ", costt
                                 writer.writerow({'n_sensors':n_sensors,'n_dipoles':n_dipoles,'batches':batches,'learning rate':learning_rate,'batch_size':batch_size,'per_batch':per_batch,'dropout':dropout,'beta':beta,'k_conv':k_conv,'n_conv1':n_conv1,'n_conv2':n_conv2,'n_layer':n_layer,'n_lstm':n_lstm,'n_steps':n_steps,'train step':-2,'cost':costt})
 

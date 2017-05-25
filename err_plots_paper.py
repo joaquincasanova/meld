@@ -14,7 +14,7 @@ test_last = np.zeros([5,1])
 for cv_run in [0,1,2,3,4]:
     for subject_id in ['aud',7]:
         idx = 0
-        for locate in [1,10,100]:
+        for locate in [1]:
             if locate  is False:
                 subsample=1
             for cnn in [True,False]:

@@ -53,14 +53,22 @@ class meas:
         #meas_in bxmxn
         self.m0 = meg_meas_in.shape[1]
         print self.m0, " MEG sensors"
-        self.m1 = eeg_meas_in.shape[1]
-        print self.m1, " EEG sensors"
         MEG=np.transpose(meg_meas_in,(1,0,2)).reshape([self.m0,-1])
-        EEG=np.transpose(eeg_meas_in,(1,0,2)).reshape([self.m1,-1])
+
+        if eeg_meas_in.shape[0]==0:
+            self.n_chan_in=1
+            self.m1 = eeg_meas_in.shape[0]
+            print self.m1, " EEG sensors"
+            EEG=np.array([])
+        else:
+            self.n_chan_in=2
+            self.m1 = eeg_meas_in.shape[1]
+            print self.m1, " EEG sensors"
+            EEG=np.transpose(eeg_meas_in,(1,0,2)).reshape([self.m1,-1])
         
         print 'MEG array: ',MEG.shape
         print 'EEG array: ',EEG.shape
-        
+
         self.meas_in = [MEG, EEG]#[m0|m1]xbatch_size*n_steps
         self.meas_xyz = [meg_meas_xyz, eeg_meas_xyz]#m0x3,m1x3
         self.meas_dims= meas_dims
@@ -112,20 +120,26 @@ class meas:
         self.R0=[r0,r1]
 
     def pca(self, Wt=None):
+        if self.n_chan_in==2:
+            chans=[[0,self.m0],[1,self.m1]]
+            Wt_=[np.zeros((self.m0,self.m0)),np.zeros((self.m1,self.m1))]
+        else:
+            chans=[[0,self.m0]]
+            Wt_=[np.zeros((self.m0,self.m0)),[]]
+
         if Wt is None:
-            Wt = [np.zeros((self.m0,self.m0)),np.zeros((self.m1,self.m1))]
-            for [channel,m] in [[0,self.m0],[1,self.m1]]:
+            Wt = Wt_
+            for [channel,m] in chans:
                 if self.batch_size*self.n_steps>m:
                     mPCA=PCA(self.meas_in[channel].T)
-                    self.meas_in[channel]=mPCA.Y.T
-                
+                    self.meas_in[channel]=mPCA.Y.T                
                 else:
                     mPCA=PCA(self.meas_in[channel])
                     self.meas_in[channel]=mPCA.Y
                 print 'Wt shape: ',mPCA.Wt.shape
                 Wt[channel]=mPCA.Wt
         else:
-            for [channel,m] in [[0,self.m0],[1,self.m1]]:
+            for [channel,m] in chans:
                 if self.batch_size*self.n_steps>m:
                     mPCA=PCA(self.meas_in[channel].T)
                     mPCA.Wt=Wt[channel]
@@ -142,10 +156,10 @@ class meas:
         
         return Wt
     def scale(self):
-        for channel in [0,1]:
+        for channel in range(0,self.n_chan_in):
             self.meas_in[channel]=np.nan_to_num((self.meas_in[channel]-np.amin(self.meas_in[channel],axis=0))/(np.amax(self.meas_in[channel],axis=0)-np.amin(self.meas_in[channel],axis=0)))
 
-    def stack_reshape(self,n_chan_in=2):
+    def stack_reshape(self, n_chan_in=2):
         if n_chan_in==2:
             self.meas_stack=np.vstack((self.meas_in[0],self.meas_in[1]))#[m0+m1]xbatch_size*n_steps
             self.m=self.m0+self.m1
@@ -168,7 +182,7 @@ class meas:
         g=np.zeros((self.m,self.n_steps*self.batch_size))
         self.meas_out=[f,g]
         
-        for channel in [0,1]:
+        for channel in range(0,self.n_chan_in):
             print "Channel ", channel
             for step in range(0,self.n_steps*self.batch_size):
                 #print "Generate interp function for step ", step
@@ -192,7 +206,7 @@ class meas:
         fig = plt.figure()
         b,n=np.unravel_index(step,[self.batch_size,self.n_steps])
 
-        for channel in [0,1]:
+        for channel in range(0,self.n_chan_in):
             print "plotting interp"
             fplot=np.squeeze(self.meas_out[channel][:,step])#m
             ax = fig.add_subplot(2,2,1+2*channel, projection='3d')

@@ -47,9 +47,9 @@ def rat_real(stim='Tones',selection='all',pca=True,subsample=1,justdims=True,cnn
     #print 'ECOG array: ',ecog_data.shape
     #print 'fake EEG array: ',eeg_data.shape
     if pca:
-        tf_meas = meas_class.meas(meg_data,meg_xyz,eeg_data,ecog_xyz, meas_dims, n_steps, total_batch_size)
+        tf_meas = meas_class.meas(meg_data,meg_xyz,np.array([]),np.array([]), meas_dims, n_steps, total_batch_size)
         Wt=tf_meas.pca()
-        tf_meas.stack_reshape(n_chan_in=1)#ignore ecog - just a placeholder
+        tf_meas.stack_reshape(n_chan_in=n_chan_in)#ignore ecog - just a placeholder
         meas_img_all = tf_meas.meas_stack
     else:
         meas_img_all = np.transpose(meg_data,(0,2,1))
@@ -758,7 +758,7 @@ def location_rat_XYZT(locate,batch_size,n_steps,p,dipole, dipole_xyz):
     return qtrue_all*1000.#mm
 
 def rat_prepro(n_chan_in,dipole,dipole_xyz,meg_data,meg_xyz, eeg_data,eeg_xyz, meas_dims, n_steps, batch_size,subject,selection='all',pca=True,subsample=1,justdims=False,cnn=True,locate=True,rnn=False,Wt=None):
-
+    print n_chan_in
     if locate is True:
         p=3
     elif locate>0:
