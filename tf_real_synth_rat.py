@@ -34,7 +34,7 @@ def pred_obs(guess,true,locate,name):
         ax.set_ylim(-16, 16)
         ax.set_zlim(-16, 16)
 
-        plt.savefig(name+'.png')
+        plt.savefig('./realsynthrat/'+name+'.png')
         plt.close()
     ###############################################################################
 #meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size=nn_prepro.aud_dataset(pca=True, subsample=10)

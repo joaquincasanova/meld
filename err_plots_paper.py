@@ -10,15 +10,18 @@ fieldnames=['cost','cost_step','batches','learning rate','batch_size','per_batch
 #['zss',True, False],['zss',True, True],['zss',False, False],['zss',False, True],
 pca=True
 rand_test=True
-test_last = np.zeros([5,1])
-for cv_run in [0,1,2,3,4]:
-    for subject_id in ['aud',7]:
-        idx = 0
-        for locate in [1]:
-            if locate  is False:
-                subsample=1
+test_last = np.zeros([5,8])
+
+for locate in [1,100]:
+            
+    for cv_run in [0,1,2,3,4]:
+        condition = 0
+        clabel = []
+
+        for subject_id in ['aud',7]:
+            idx = 0
             for cnn in [True,False]:
-                for rnn in [True,False]:
+                    for rnn in [True,False]:
                         if subject_id is 'aud':
                             treats=[None]#,'left/auditory', 'right/auditory', 'left/visual', 'right/visual']
                         elif subject_id is 'rat':
@@ -34,7 +37,7 @@ for cv_run in [0,1,2,3,4]:
 
 
                             fieldnames=['batches','learning rate','batch_size','per_batch','dropout','beta','k_conv','n_conv1','n_conv2','n_layer','n_lstm','n_steps','train step','cost']
-                            name='/home/jcasa/meld/tnrse2017/tf1_%s_subject_%s_pca_all_%s_rand_%s_cnn_%s_rnn_%s_locate_%s_treat_%s' % (cv_run, subject_id, pca, rand_test, cnn, rnn,locate,lab_treat)
+                            name='/home/jcasa/meld/tnrse2017/data/2tf1_%s_subject_%s_pca_all_%s_rand_%s_cnn_%s_rnn_%s_locate_%s_treat_%s' % (cv_run, subject_id, pca, rand_test, cnn, rnn,locate,lab_treat)
                             fname = name + '.csv' 
 
                             data=np.zeros([1,10])
@@ -97,7 +100,7 @@ for cv_run in [0,1,2,3,4]:
                         err_col_lab=['RMSE Train (mm)','RMSE Validation (mm)']
 
                         data=np.delete(data,(0),axis=0)
-                        leg=[('-','b'), ('-','g'),('-', 'r'), ('-','k'),(':','b'), (':','g'),(':', 'r'), (':','k'),('--','b'), ('--','g'),('--', 'r'), ('--','k'),('-.','b'), ('-.','g'),('-.', 'r'), ('-.','k')]
+                        leg=[('-','b'), ('-.','g'),('--', 'r'), (':','k')]
                         for [kn, cn1, cn2, ls, la, ts, vs, ns] in params_list:
                             idx+=1 
 
@@ -123,14 +126,14 @@ for cv_run in [0,1,2,3,4]:
                             picks = np.intersect1d(picks, np.where(data[:,col_step]>=0))
                             test = np.intersect1d(test, np.where(data[:,col_step]<=-2))
 
-                            test_last[cv_run]=np.mean(data[test,err_col])
+                            test_last[cv_run,condition]=np.mean(data[test,err_col])
                             val = np.intersect1d(val, np.where(data[:,col_step]==-1))
 
                             #print data[val,err_col]
 
                             val_last=np.mean(data[val,err_col])
 
-                            lab=lab+', test cost='+str(test_last[cv_run])
+                            lab=lab+', test cost='+str(test_last[cv_run,condition])
 
                             #print len(picks)
                             #time.sleep(1)
@@ -149,7 +152,7 @@ for cv_run in [0,1,2,3,4]:
                                 title = 'Subject: faces #'+str(subject_id)
                             plt.title(title)
                             plt.xlim(0,500*10.)
-                            plt.ylim(0,100.)
+                            plt.ylim(0,150.)
                             plt.ylabel(err_col_lab[0])
 
                             plt.subplot(2, 1, 2)
@@ -157,11 +160,17 @@ for cv_run in [0,1,2,3,4]:
                             plt.semilogy(data_val_x.T, data_val_y.T,linestyle=lin,color=col,label=lab)
 
                             plt.xlim(0,500*10.)
-                            plt.ylim(0,100.)
+                            plt.ylim(0,150.)
                             plt.ylabel(err_col_lab[1])
 
                             plt.xlabel('Step')
+                            condition+=1
+                            clabel.append(str(subject_id)+'_CNN_'+str(cnn)+'_RNN_'+str(rnn)+'_'+str(locate))
+            legend = plt.legend(loc='best',labelspacing=0)
+            plt.show()
 
-        legend = plt.legend(loc='best',labelspacing=0)
-        plt.show()
-        print 'Test errors:', test_last, np.mean(test_last)
+    print 'Test errors label:', clabel
+    
+    print 'Test errors mean:', np.mean(test_last,axis=0)
+    
+    print 'Test errors std:', np.std(test_last,axis=0)

@@ -31,11 +31,11 @@ def pred_obs(guess,true,locate,name):
         ax.plot(x, y, z, 'ob')
         ax.plot(xt, yt, zt, 'or')
         plt.title('Stimulus '+name)
-        ax.set_xlim(-16, 16)
-        ax.set_ylim(-16, 16)
-        ax.set_zlim(-16, 16)
+        ax.set_xlim(10, 15)
+        ax.set_ylim(-5, 5)
+        ax.set_zlim(-5, 5)
 
-        plt.savefig(name+'.png')
+        plt.savefig('./realrat/'+name+'.png')
         plt.close()
     ###############################################################################
 
@@ -50,7 +50,7 @@ learning_rate = 0.005
 dropout = 1.
 beta = 0.
 
-for locate in [1,False]:
+for locate in [1]:
     subsample = 1
     if locate  is False:
         subsample=1

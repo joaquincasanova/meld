@@ -50,11 +50,11 @@ beta = 0.
 subsample = 1
 params_list = [[3,3,5,10,3,.2,.2,.2]]
 
-for cv_run in [1, 2, 3, 4]:
-    for locate in [100]:
+for cv_run in [0]:
+    for locate in [1]:
         for cnn in [True,False]:
             for rnn in [True,False]:
-                for subject_id in ['aud',7]:
+                for subject_id in [7]:
                     if subject_id is 'aud':
                         treats=[None]#,'left/auditory', 'right/auditory', 'left/visual', 'right/visual']
                     elif subject_id is 'rat':
@@ -71,7 +71,7 @@ for cv_run in [1, 2, 3, 4]:
                         print 'Subject: ',subject_id,' PCA: ',pca,' Random: ',rand_test, ' CNN: ',cnn, ' RNN: ',rnn, 'Locate: ',locate, 'Treat: ',lab_treat
 
                         fieldnames=['batches','learning rate','batch_size','per_batch','dropout','beta','k_conv','n_conv1','n_conv2','n_layer','n_lstm','n_steps','train step','cost']
-                        name='/home/jcasa/meld/tnrse2017/data/tf1_%s_subject_%s_pca_all_%s_rand_%s_cnn_%s_rnn_%s_locate_%s_treat_%s' % (cv_run,subject_id, pca, rand_test, cnn, rnn,locate,lab_treat)
+                        name='/home/jcasa/meld/code/python/data/tf1_%s_subject_%s_pca_all_%s_rand_%s_cnn_%s_rnn_%s_locate_%s_treat_%s-grad' % (cv_run,subject_id, pca, rand_test, cnn, rnn,locate,lab_treat)
                         fname = name + '.csv' 
 
                         with open(fname,'w') as csvfile:
@@ -139,7 +139,7 @@ for cv_run in [1, 2, 3, 4]:
                                 nn.initializer()     
 
                                 with tf.Session() as session:
-                                    logdir = '/tmp/tensorflowlogs/tnrse2017_tf1_%s/sub_%s/pca_all_%s/rand_%s/cnn_%s/rnn_%s/locate_knn_%s/treat_%s/' % (cv_run,subject_id,pca,rand_test,cnn,rnn,locate,lab_treat)
+                                    logdir = '/tmp/tensorflowlogs/tf1_%s-grad/sub_%s/pca_all_%s/rand_%s/cnn_%s/rnn_%s/locate_knn_%s/treat_%s/' % (cv_run,subject_id,pca,rand_test,cnn,rnn,locate,lab_treat)
                                     if tf.gfile.Exists(logdir):
                                         tf.gfile.DeleteRecursively(logdir)
                                     tf.gfile.MakeDirs(logdir)
