@@ -134,7 +134,7 @@ class dipole:
         xyzRR0[:,1]=self.Y[:,0]-Y0[:,0]
         xyzRR0[:,2]=self.Z[:,0]-Z0[:,0]
         uno=np.ones([self.m,1])
-        x,y,z = sphere.sph2cart(self.AZ,self.EL,uno)
+        x,y,z = sphere.sph2cart(self.AZ,self.EL,uno)#unit vector of sensor orientation
         xyzr=np.ones([self.m,3])
         xyzr[:,0]=x[:,0]
         xyzr[:,1]=y[:,0]
