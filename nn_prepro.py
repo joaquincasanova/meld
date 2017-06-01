@@ -13,6 +13,8 @@ from mne.minimum_norm import (make_inverse_operator, apply_inverse,
                               read_inverse_operator)
 import pickle
 
+GRID = [17,17]
+
 def rat_real(stim='Tones',selection='all',pca=True,subsample=1,justdims=True,cnn=False,locate=True,treat=None,rnn=False,Wt=None):
     #print 'selection ',selection
     ecog_thresh = 1e-5
@@ -196,7 +198,7 @@ def aud_dataset(selection='all',pca=False,subsample=1,justdims=True,cnn=True,loc
     if Wt is None:
         print 'Precalculate PCA weights:'
         #weight PCA matrix. Uses 'treat' - so to apply across all treatments, use treat=None
-        Wt=Wt_calc(stc,epochs_eeg,epochs_meg,[11,11])
+        Wt=Wt_calc(stc,epochs_eeg,epochs_meg,GRID)
         
     #stc.save('sample_audvis-source-epochs')
  
@@ -256,7 +258,7 @@ def faces_dataset(subject_id,selection='all',pca=False,subsample=1,justdims=True
     if Wt is None:
         print 'Precalculate PCA weights:'
         #weight PCA matrix. Uses 'treat' - so to apply across all treatments, use treat=None
-        Wt=Wt_calc(stc,epochs_eeg,epochs_meg,[11,11])
+        Wt=Wt_calc(stc,epochs_eeg,epochs_meg,GRID)
         
     if justdims is True:
         meas_dims, m, p, n_steps, total_batch_size, Wt = prepro(stc, epochs, epochs_eeg,epochs_meg,subject,selection=selection,pca=pca,subsample=subsample,justdims=justdims,cnn=cnn,locate=locate,rnn=rnn,Wt=Wt)
@@ -444,7 +446,7 @@ def cnn_justdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca=
     else:
         p = stc[0]._data.shape[0]
     n_steps = stc[0]._data.shape[1]
-    meas_dims=[11,11]
+    meas_dims=GRID
     m = meas_dims[0]*meas_dims[1]
     del stc, epochs, epochs_eeg, epochs_meg
     
@@ -492,7 +494,7 @@ def cnn_xjustdims(stc, epochs, epochs_eeg,epochs_meg,subject,selection='all',pca
 
     n_steps=meg_data.shape[2]
 
-    meas_dims=[11,11]
+    meas_dims=GRID
     print "Image grid dimensions: ", meas_dims
     tf_meas = meas_class.meas(meg_data,meg_xyz, eeg_data,eeg_xyz, meas_dims, n_steps, total_batch_size)
     if pca is True:

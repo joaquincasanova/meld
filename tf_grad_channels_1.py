@@ -54,7 +54,7 @@ for cv_run in [0]:
     for locate in [1]:
         for cnn in [True,False]:
             for rnn in [True,False]:
-                for subject_id in [7]:
+                for subject_id in ['aud',7]:
                     if subject_id is 'aud':
                         treats=[None]#,'left/auditory', 'right/auditory', 'left/visual', 'right/visual']
                     elif subject_id is 'rat':
