@@ -13,7 +13,7 @@ from mne.minimum_norm import (make_inverse_operator, apply_inverse,
                               read_inverse_operator)
 import pickle
 
-GRID = [17,17]
+GRID = [11,11]
 
 def rat_real(stim='Tones',selection='all',pca=True,subsample=1,justdims=True,cnn=False,locate=True,treat=None,rnn=False,Wt=None):
     #print 'selection ',selection
@@ -139,10 +139,10 @@ def aud_dataset(selection='all',pca=False,subsample=1,justdims=True,cnn=True,loc
 
     events = mne.read_events(event_fname)
 
-#    picks = mne.pick_types(raw.info, meg='mag', eeg=True, eog=True,
-#                           exclude='bads') #for simplicity ignore grad channels
-    picks = mne.pick_types(raw.info, meg=True, eeg=True, eog=True,
-                           exclude='bads') 
+    picks = mne.pick_types(raw.info, meg='mag', eeg=True, eog=True,
+                           exclude='bads') #for simplicity ignore grad channels
+    #picks = mne.pick_types(raw.info, meg=True, eeg=True, eog=True,
+    #                       exclude='bads') 
 
     raw.rename_channels(mapping={'EOG 061': 'EOG'})
 
@@ -221,17 +221,17 @@ def faces_dataset(subject_id,selection='all',pca=False,subsample=1,justdims=True
     subject = "sub%03d" % subject_id
     print("processing %s" % subject)
 
-#    invname = '%s-meg-%s-inv.fif' % (subject,spacing)
-#    invpath = os.path.join(os.path.join(meg_dir,subject),invname) 
-#    fwdname = '%s-meg-%s-fwd.fif' % (subject,spacing)
-#    fwdpath = os.path.join(os.path.join(meg_dir,subject),fwdname) 
-#    eponame = '%s-epo.fif' % (subject) 
-
     invname = '%s-meg-%s-inv.fif' % (subject,spacing)
     invpath = os.path.join(os.path.join(meg_dir,subject),invname) 
     fwdname = '%s-meg-%s-fwd.fif' % (subject,spacing)
     fwdpath = os.path.join(os.path.join(meg_dir,subject),fwdname) 
-    eponame = '%s-grad-epo.fif' % (subject) 
+    eponame = '%s-epo.fif' % (subject) 
+
+#    invname = '%s-meg-%s-inv.fif' % (subject,spacing)
+#    invpath = os.path.join(os.path.join(meg_dir,subject),invname) 
+#    fwdname = '%s-meg-%s-fwd.fif' % (subject,spacing)
+#    fwdpath = os.path.join(os.path.join(meg_dir,subject),fwdname) 
+#    eponame = '%s-grad-epo.fif' % (subject) 
 
     epopath = os.path.join(os.path.join(meg_dir,subject),eponame)
     epochs = mne.read_epochs(epopath,verbose=False)

@@ -14,27 +14,34 @@ from matplotlib.ticker import LinearLocator, FormatStrFormatter
 import matplotlib.pyplot as plt
 
 def pred_obs(guess,true,locate,name):
-    for l in range(0,locate):
-        #guess=sphere.sph2cartMatNB(guess)
-        #true=sphere.sph2cartMatNB(true)
-        
+    
+    if locate is 1 or locate is True:     
+        z = np.squeeze(guess[:,2])
+        y = np.squeeze(guess[:,1])
+        x = np.squeeze(guess[:,0])
+
+        zt = np.squeeze(true[:,2])
+        yt = np.squeeze(true[:,1])
+        xt = np.squeeze(true[:,0])
+    else:
+        L = np.arange(0,locate)
         z = np.squeeze(guess[:,2])
         y = np.squeeze(guess[:,1])
         x = np.squeeze(guess[:,0])
 
         zt = np.squeeze(true[:,2+l*3])
         yt = np.squeeze(true[:,1+l*3])
-        xt = np.squeeze(true[:,0+l*3])
+        xt = np.squeeze(true[:,0+locate*3])
 
-        fig = plt.figure()
-        ax = fig.gca(projection='3d')
-        ax.plot(x, y, z, 'ob')
-        ax.plot(xt, yt, zt, 'xr')
-        plt.xlabel('X (mm)')
-        plt.ylabel('Y (mm)')
-        plt.title('Dipole locations (mm)')
-        plt.savefig(name+'.png')
-        plt.close()
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')
+    ax.plot(x, y, z, 'ob')
+    ax.plot(xt, yt, zt, 'xr')
+    plt.xlabel('X (mm)')
+    plt.ylabel('Y (mm)')
+    plt.title('Dipole locations (mm)')
+    plt.savefig(name+'.png')
+    plt.close()
     ###############################################################################
 
 #meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size=nn_prepro.aud_dataset(pca=True, subsample=10)
@@ -50,17 +57,15 @@ beta = 0.
 subsample = 1
 params_list = [[3,3,5,10,3,.2,.2,.2]]
 
-for cv_run in [1, 2, 3, 4]:
-    for locate in [100]:
+for cv_run in [0, 1, 2, 3, 4]:
+    for locate in [1,100]:
         for cnn in [True,False]:
             for rnn in [True,False]:
-                for subject_id in ['aud',7]:
+                for subject_id in ['aud',7,8]:
                     if subject_id is 'aud':
-                        treats=[None]#,'left/auditory', 'right/auditory', 'left/visual', 'right/visual']
-                    elif subject_id is 'rat':
-                        treats=[None]
-                    else:
-                        treats=[None]#,'face/famous','scrambled','face/unfamiliar']
+                        treats=[None,'left/auditory', 'right/auditory', 'left/visual', 'right/visual']
+                    elif subject_id is 7 or subject_id is 8:
+                        treats=[None,'face/famous','scrambled','face/unfamiliar']
 
                     for treat in treats:
                         if treat is not None:
@@ -80,25 +85,11 @@ for cv_run in [1, 2, 3, 4]:
 
                             for [k_conv, n_conv1, n_conv2, n_lstm, n_layer, test_frac, val_frac, batch_frac] in params_list:
 
-                                if cnn is 'fft' or subject_id is 'rat':
-                                    n_chan_in=1
-                                else:
-                                    n_chan_in=2
+                                n_chan_in=2
 
                                 if subject_id is 'aud':
                                     meas_dims, m, p, n_steps, total_batch_size,Wt = nn_prepro.aud_dataset(justdims=True,cnn=cnn,locate=locate,treat=None)
                                     meas_dims, m, p, n_steps, total_batch_size,Wt = nn_prepro.aud_dataset(justdims=True,cnn=cnn,locate=locate,treat=treat,Wt=Wt)
-                                elif subject_id is 'rat':
-                                    total_batch_size=1000
-                                    delT=1e-2
-                                    n_steps=100
-                                    meas_dims_in=[4,1]
-                                    dipole_dims=[1,1,4]
-                                    if cnn is True:
-                                        assert k_conv<np.min(meas_dims), "Kconv must be less than image size."
-                                    meas_dims, m, p, n_steps, total_batch_size, Wt = nn_prepro.rat_synth(total_batch_size,delT,n_steps,meas_dims_in,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True,selection='all',pca=True,subsample=1,justdims=True,cnn=cnn,locate=locate,treat=None,rnn=rnn,Wt=None)
-                                    meas_dims, m, p, n_steps, total_batch_size, Wt = nn_prepro.rat_synth(total_batch_size,delT,n_steps,meas_dims_in,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True,selection='all',pca=True,subsample=1,justdims=True,cnn=cnn,locate=locate,treat=treat,rnn=rnn,Wt=Wt)
-                                    #print p, "Dipoles returned"
                                 else:
                                     meas_dims, m, p, n_steps, total_batch_size,Wt = nn_prepro.faces_dataset(subject_id,cnn=cnn,justdims=True,locate=locate,treat=None)
                                     meas_dims, m, p, n_steps, total_batch_size,Wt = nn_prepro.faces_dataset(subject_id,cnn=cnn,justdims=True,locate=locate,treat=treat,Wt=Wt)
@@ -108,9 +99,6 @@ for cv_run in [1, 2, 3, 4]:
                                 per_batch = int(5000/batches)
                                 if subject_id is 'aud':
                                     meas_img_test, qtrue_test, meas_dims, m, p, n_steps, test_size,Wt = nn_prepro.aud_dataset(selection=test,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,Wt=Wt)
-                                elif subject_id is 'rat':
-                                    meas_img_test, qtrue_test, meas_dims, m, p, n_steps, test_size,Wt = nn_prepro.rat_synth(total_batch_size,delT,n_steps,meas_dims_in,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True,selection=test,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,rnn=rnn,Wt=Wt)
-                                    #print p, "Dipoles returned"
                                 else:
                                     meas_img_test, qtrue_test, meas_dims, m, p, n_steps, test_size,Wt = nn_prepro.faces_dataset(subject_id,selection=test,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,Wt=Wt)
                                 #pick a test batch
@@ -118,9 +106,6 @@ for cv_run in [1, 2, 3, 4]:
 
                                 if subject_id is 'aud':
                                     meas_img_val, qtrue_val, meas_dims, m, p, n_steps, val_size,Wt = nn_prepro.aud_dataset(selection=val,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,Wt=Wt)
-                                elif subject_id is 'rat':
-                                    meas_img_val, qtrue_val, meas_dims, m, p, n_steps, val_size,Wt = nn_prepro.rat_synth(total_batch_size,delT,n_steps,meas_dims_in,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True,selection=val,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,rnn=rnn,Wt=Wt)
-                                    #print p, "Dipoles returned"
                                 else:
                                     meas_img_val, qtrue_val, meas_dims, m, p, n_steps, val_size,Wt = nn_prepro.faces_dataset(subject_id,selection=val,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,Wt=Wt)
                                 #pick a val batch
@@ -155,8 +140,6 @@ for cv_run in [1, 2, 3, 4]:
                                         #pick a first batch of batch_size
                                         if subject_id is 'aud':
                                             meas_img, qtrue, meas_dims, m, p, n_steps, batch_size,Wt = nn_prepro.aud_dataset(selection=batch,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,Wt=Wt)
-                                        elif subject_id is 'rat':
-                                            meas_img, qtrue, meas_dims, m, p, n_steps, batch_size,Wt = nn_prepro.rat_synth(total_batch_size,delT,n_steps,meas_dims_in,dipole_dims,n_chan_in,meas_xyz=None,dipole_xyz=None,orient=None,noise_flag=True,selection=batch,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,rnn=rnn,Wt=Wt)
                                         else:
                                             meas_img, qtrue, meas_dims, m, p, n_steps, batch_size,Wt = nn_prepro.faces_dataset(subject_id,selection=batch,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,Wt=Wt)
 
@@ -214,11 +197,15 @@ for cv_run in [1, 2, 3, 4]:
                                     if locate is False:
                                         costt, acct = session.run([nn.cost, nn.accuracy],feed_dict={nn.qtrainPH: qtrue_test, nn.measPH: meas_img_test, nn.dropoutPH: dropout, nn.betaPH: beta})
                                     else:
-                                        costt = session.run([nn.cost],feed_dict={nn.qtrainPH: qtrue_test, nn.measPH: meas_img_test, nn.dropoutPH: dropout, nn.betaPH: beta})
-                                    print "Test Step: ", step, "Cost: ", costt
+                                        if rnn:
+                                            costt, guess, true = session.run([nn.cost, nn.qhat, nn.qtrain_unflat],feed_dict={nn.qtrainPH: qtrue_test, nn.measPH: meas_img_test, nn.dropoutPH: dropout, nn.betaPH: beta})
+                                        else:
+                                            costt, guess, true = session.run([nn.cost, nn.qhat_last, nn.qtrain_last],feed_dict={nn.qtrainPH: qtrue_test, nn.measPH: meas_img_test, nn.dropoutPH: dropout, nn.betaPH: beta})
+                                        print "Test Step: ", step, "Cost: ", costt
+                                        pred_obs(guess,true,locate,name)
+
                                     writer.writerow({'batches':batches,'learning rate':learning_rate,'batch_size':batch_size,'per_batch':per_batch,'dropout':dropout,'beta':beta,'k_conv':k_conv,'n_conv1':n_conv1,'n_conv2':n_conv2,'n_layer':n_layer,'n_lstm':n_lstm,'n_steps':n_steps,'train step':-2,'cost':costt[0]})
-
-
+                                    
 
 
                         csvfile.close()
