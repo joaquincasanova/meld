@@ -23,17 +23,20 @@ for locate in [1,100]:
             for cnn in [True,False]:
                     for rnn in [True,False]:
                         if subject_id is 'aud':
-                            treats=[None]#,'left/auditory', 'right/auditory', 'left/visual', 'right/visual']
+                            treats=[None,'left/auditory', 'right/auditory', 'left/visual', 'right/visual']
                         elif subject_id is 'rat':
                             treats=[None]
                         else:
-                            treats=[None]#,'face/famous','scrambled','face/unfamiliar']
+                            treats=[None,'face/famous','scrambled','face/unfamiliar']
 
                         for treat in treats:
                             if treat is not None:
                                 lab_treat=treat.replace("/","_")
+                                title_treat = treat
                             else:
                                 lab_treat='None'
+                                title_treat = 'all'
+                                
 
 
                             fieldnames=['batches','learning rate','batch_size','per_batch','dropout','beta','k_conv','n_conv1','n_conv2','n_layer','n_lstm','n_steps','train step','cost']
@@ -150,6 +153,7 @@ for locate in [1,100]:
                                 title = 'Subject: '+subject_id
                             else:
                                 title = 'Subject: faces #'+str(subject_id)
+                            title = title + ', treatment ',title_treat
                             plt.title(title)
                             plt.xlim(0,500*10.)
                             plt.ylim(0,150.)
@@ -165,7 +169,7 @@ for locate in [1,100]:
 
                             plt.xlabel('Step')
                             condition+=1
-                            clabel.append(str(subject_id)+'_CNN_'+str(cnn)+'_RNN_'+str(rnn)+'_'+str(locate))
+                            clabel.append(str(subject_id)+'_CNN_'+str(cnn)+'_RNN_'+str(rnn)+'_'+str(locate)+'_'+lab_treat)
             legend = plt.legend(loc='best',labelspacing=0)
             plt.show()
 

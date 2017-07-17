@@ -13,7 +13,7 @@ from matplotlib import cm
 from matplotlib.ticker import LinearLocator, FormatStrFormatter
 import matplotlib.pyplot as plt
 
-def pred_obs(guess,true,locate,name):
+def pred_obs_last(guess,true,locate,name):
     
     if locate is 1 or locate is True:     
         z = np.squeeze(guess[:,2])
@@ -23,27 +23,45 @@ def pred_obs(guess,true,locate,name):
         zt = np.squeeze(true[:,2])
         yt = np.squeeze(true[:,1])
         xt = np.squeeze(true[:,0])
-    else:
-        L = np.arange(0,locate)
-        z = np.squeeze(guess[:,2])
-        y = np.squeeze(guess[:,1])
-        x = np.squeeze(guess[:,0])
+        
+        fig = plt.figure()
+        ax = fig.gca(projection='3d')
+        ax.plot(x, y, z, 'ob')
+        ax.plot(xt, yt, zt, 'xr')
+        plt.xlabel('X (mm)')
+        plt.ylabel('Y (mm)')
+        plt.title('Dipole locations (mm)')
+        plt.savefig(name+'.png')
+        plt.close()
+        ############################################################################
+        ###
 
-        zt = np.squeeze(true[:,2+l*3])
-        yt = np.squeeze(true[:,1+l*3])
-        xt = np.squeeze(true[:,0+locate*3])
+def pred_obs_series(guess,true,locate,name,n,b):
+    guess=guess.reshape([b,n,-1])
+    true=true.reshape([b,n,-1])
+    for t in range(0,n):
+        if locate is 1 or locate is True:     
+            z = np.squeeze(guess[:,t,2])
+            y = np.squeeze(guess[:,t,1])
+            x = np.squeeze(guess[:,t,0])
 
-    fig = plt.figure()
-    ax = fig.gca(projection='3d')
-    ax.plot(x, y, z, 'ob')
-    ax.plot(xt, yt, zt, 'xr')
-    plt.xlabel('X (mm)')
-    plt.ylabel('Y (mm)')
-    plt.title('Dipole locations (mm)')
-    plt.savefig(name+'.png')
-    plt.close()
-    ###############################################################################
+            zt = np.squeeze(true[:,t,2])
+            yt = np.squeeze(true[:,t,1])
+            xt = np.squeeze(true[:,t,0])
 
+            fig = plt.figure()
+            ax = fig.gca(projection='3d')
+            ax.plot(x, y, z, 'ob')
+            ax.plot(xt, yt, zt, 'xr')
+            plt.xlabel('X (mm)')
+            plt.ylabel('Y (mm)')
+            plt.title('Dipole locations (mm) at timestep #'+str(t))
+            plt.savefig(name+'_'+str(t)'.png')
+            plt.close()
+    ############################################################################
+    ###
+
+    
 #meas_img_all, qtrue_all, meas_dims, m, p, n_steps, total_batch_size=nn_prepro.aud_dataset(pca=True, subsample=10)
 
 pca = True
@@ -110,7 +128,6 @@ for cv_run in [0, 1, 2, 3, 4]:
                                     meas_img_val, qtrue_val, meas_dims, m, p, n_steps, val_size,Wt = nn_prepro.faces_dataset(subject_id,selection=val,pca=pca,subsample=subsample,justdims=False,cnn=cnn,locate=locate,treat=treat,Wt=Wt)
                                 #pick a val batch
                                 print "Val batch "#,val
-
                                 n_out=p
                                 k_pool=1
 
@@ -156,14 +173,14 @@ for cv_run in [0, 1, 2, 3, 4]:
                                             if step % print_step==0:
                                                 print "Train Step: ", step, "Cost: ",cost                                              
 
-                                            if False:#step % plot_step==0:
-                                                name = str(subject_id)+'_'+str(batch_num)+'_'+str(step)+'_'+str(rnn)+'_'+str(cnn)
+                                            if step % plot_step==0:
                                                 if rnn is True:
                                                     guess,true = session.run([nn.qhat_last, nn.qtrain_last],feed_dict={nn.qtrainPH: qtrue, nn.measPH: meas_img, nn.dropoutPH: dropout, nn.betaPH: beta})
+                                                    pred_obs_last(guess,true,locate,name+'_train_'+str(step))
                                                 else:
                                                     guess,true = session.run([nn.qhat, nn.qtrain_unflat],feed_dict={nn.qtrainPH: qtrue, nn.measPH: meas_img, nn.dropoutPH: dropout, nn.betaPH: beta})
-                                                pred_obs(guess,true,locate,name)
-
+                                                    pred_obs_series(guess,true,locate,name+'_train_'+str(step),n_steps,batch_size)
+                                                
                                             writer.writerow({'batches':batches,'learning rate':learning_rate,'batch_size':batch_size,'per_batch':per_batch,'dropout':dropout,'beta':beta,'k_conv':k_conv,'n_conv1':n_conv1,'n_conv2':n_conv2,'n_layer':n_layer,'n_steps':n_steps,'n_lstm':n_lstm,'train step':step,'cost':cost})
 
                                             tstep=step+batch_num*per_batch
@@ -171,6 +188,7 @@ for cv_run in [0, 1, 2, 3, 4]:
                                             if locate is False:
                                                 train_writer.add_summary(train_summary, tstep)
                                                 train_writer.add_summary(train_acc_summary, tstep)
+
                                             else:
                                                 train_writer.add_summary(train_summary, tstep)
 
@@ -198,13 +216,16 @@ for cv_run in [0, 1, 2, 3, 4]:
                                         costt, acct = session.run([nn.cost, nn.accuracy],feed_dict={nn.qtrainPH: qtrue_test, nn.measPH: meas_img_test, nn.dropoutPH: dropout, nn.betaPH: beta})
                                     else:
                                         if rnn:
-                                            costt, guess, true = session.run([nn.cost, nn.qhat, nn.qtrain_unflat],feed_dict={nn.qtrainPH: qtrue_test, nn.measPH: meas_img_test, nn.dropoutPH: dropout, nn.betaPH: beta})
-                                        else:
                                             costt, guess, true = session.run([nn.cost, nn.qhat_last, nn.qtrain_last],feed_dict={nn.qtrainPH: qtrue_test, nn.measPH: meas_img_test, nn.dropoutPH: dropout, nn.betaPH: beta})
-                                        print "Test Step: ", step, "Cost: ", costt
-                                        pred_obs(guess,true,locate,name)
+                                            pred_obs_last(guess,true,locate,name)
 
-                                    writer.writerow({'batches':batches,'learning rate':learning_rate,'batch_size':batch_size,'per_batch':per_batch,'dropout':dropout,'beta':beta,'k_conv':k_conv,'n_conv1':n_conv1,'n_conv2':n_conv2,'n_layer':n_layer,'n_lstm':n_lstm,'n_steps':n_steps,'train step':-2,'cost':costt[0]})
+                                        else:
+                                            costt, guess, true = session.run([nn.cost, nn.qhat, nn.qtrain_unflat],feed_dict={nn.qtrainPH: qtrue_test, nn.measPH: meas_img_test, nn.dropoutPH: dropout, nn.betaPH: beta})
+                                            pred_obs_series(guess,true,locate,name,n_steps,test_size)
+
+                                        print "Test Step: ", step, "Cost: ", costt
+                                        
+                                    writer.writerow({'batches':batches,'learning rate':learning_rate,'batch_size':batch_size,'per_batch':per_batch,'dropout':dropout,'beta':beta,'k_conv':k_conv,'n_conv1':n_conv1,'n_conv2':n_conv2,'n_layer':n_layer,'n_lstm':n_lstm,'n_steps':n_steps,'train step':-2,'cost':costt})
                                     
 
 
